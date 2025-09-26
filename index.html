@@ -289,7 +289,7 @@ function syncFinishAndBindingUI(){
 function onFinishChange(){
   syncFinishAndBindingUI();
   // Keep other derived values fresh
-  refreshDerivedDebounced?.();
+  if (typeof refreshDerivedDebounced === 'function') refreshDerivedDebounced();
   if (typeof validateCanCalculate === 'function') validateCanCalculate();
 }
 
@@ -310,7 +310,7 @@ function toggleBindingDetailed(){
   if (!on && finishSel.value !== 'Sonic Seam')   finishSel.value = 'Sonic Seam';
 
   syncFinishAndBindingUI();
-  refreshDerivedDebounced?.();
+  if (typeof refreshDerivedDebounced === 'function') refreshDerivedDebounced();
   if (typeof validateCanCalculate === 'function') validateCanCalculate();
 }
 
@@ -728,79 +728,63 @@ function showInlineError(msg, elToFocus){
 function calculateAll(){
   showInlineError('');
   const pNameEl = document.getElementById('productName');
-  const pName = pNameEl.value.trim();
-  if(!pName){ pNameEl.classList.add('danger'); showInlineError('Product Name is required to calculate.', pNameEl); return; }
-
-  
-  // Early guard for mandatory binding & liner before heavy calc
-  (function(){
-    // Liner GSM guard
-    const includeLiner = document.getElementById('includeLiner');
-    if (includeLiner && includeLiner.checked){
-      const lG = document.getElementById('linerGSM');
-      const v = parseFloat(lG && lG.value);
-      if (!lG || isNaN(v) || v <= 0){
-        if (lG) lG.classList.add('danger');
-        const lHelp = document.getElementById('linerGSMHelp'); if (lHelp) lHelp.style.display='block';
-        showInlineError('Enter Lining GSM (g/m²).', lG || includeLiner);
-        validateCanCalculate && validateCanCalculate();
-        return;
-      }
-    }
-    // Binding guard
-    const finishSel = document.getElementById('finishType');
-    const includeBinding = document.getElementById('includeBinding');
-    const bindSel = document.getElementById('bindingCode');
-    const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
-    if (needsBinding && (!bindSel || !bindSel.value)){
-      if (bindSel) bindSel.classList.add('danger');
-      showInlineError('Select a Binding Code when Bound Duvets/Binding is chosen.', bindSel || includeBinding);
-      validateCanCalculate && validateCanCalculate();
-      return;
-    }
-  })();
-// Require Fabric 1 always
-  const f1Sel = document.getElementById('fabric1Type');
-  if(!f1Sel.value){ document.getElementById('fabric1Help').style.display='block'; f1Sel.classList.add('danger'); showInlineError('Select Fabric 1 type.', f1Sel); validateCanCalculate(); return; }
-
-  if (document.getElementById('numFabrics').value === '2'){
-    const f2Sel = document.getElementById('fabric2Type');
-    if (!f2Sel || !f2Sel.value){
-      document.getElementById('fabric2Help').style.display='block';
-      f2Sel.classList.add('danger');
-      showInlineError('Select Fabric 2 type.', f2Sel); validateCanCalculate(); return;
-    }
+  const pName = (pNameEl?.value || '').trim();
+  if (!pName){
+    if (pNameEl) pNameEl.classList.add('danger');
+    showInlineError('Product Name is required to calculate.', pNameEl || null);
+    return;
   }
-  // Require Lining GSM if lining is included
-  if (document.getElementById('includeLiner').checked){
+
+  // Liner guard
+  const includeLiner = document.getElementById('includeLiner');
+  if (includeLiner && includeLiner.checked){
     const lG = document.getElementById('linerGSM');
     const lHelp = document.getElementById('linerGSMHelp');
     const v = parseFloat(lG && lG.value);
     if (!lG || isNaN(v) || v <= 0){
       if (lG) lG.classList.add('danger');
       if (lHelp) lHelp.style.display='block';
-      showInlineError('Enter Lining GSM (g/m²).', lG || document.getElementById('includeLiner'));
-      validateCanCalculate();
+      showInlineError('Enter Lining GSM (g/m²).', lG || includeLiner);
+      if (typeof validateCanCalculate === 'function') validateCanCalculate();
       return;
     }
-
-  // Require Binding Code if finish=Bound Duvets OR binding included
-  (function(){
-    const finishSel = document.getElementById('finishType');
-    const includeBinding = document.getElementById('includeBinding');
-    const bindSel = document.getElementById('bindingCode');
-    const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
-    if (needsBinding && (!bindSel || !bindSel.value)){
-      if (bindSel) bindSel.classList.add('danger');
-      showInlineError('Select a Binding Code when Bound Duvets/Binding is chosen.', bindSel || document.getElementById('includeBinding'));
-      validateCanCalculate && validateCanCalculate();
-      return;
-    }
-  })();
-
-
   }
 
+  // Binding guard
+  const finishSel = document.getElementById('finishType');
+  const includeBinding = document.getElementById('includeBinding');
+  const bindSel = document.getElementById('bindingCode');
+  const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
+  if (needsBinding && (!bindSel || !bindSel.value)){
+    if (bindSel) bindSel.classList.add('danger');
+    showInlineError('Select a Binding Code when Bound Duvets/Binding is chosen.', bindSel || includeBinding);
+    if (typeof validateCanCalculate === 'function') validateCanCalculate();
+    return;
+  }
+
+  // Require Fabric 1 always
+  const f1Sel = document.getElementById('fabric1Type');
+  if (!f1Sel || !f1Sel.value){
+    const help1 = document.getElementById('fabric1Help');
+    if (help1) help1.style.display='block';
+    if (f1Sel) f1Sel.classList.add('danger');
+    showInlineError('Select Fabric 1 type.', f1Sel || null);
+    if (typeof validateCanCalculate === 'function') validateCanCalculate();
+    return;
+  }
+
+  // Fabric 2 when applicable
+  if (document.getElementById('numFabrics').value === '2'){
+    const f2Sel = document.getElementById('fabric2Type');
+    if (!f2Sel || !f2Sel.value){
+      const help2 = document.getElementById('fabric2Help');
+      if (help2) help2.style.display='block';
+      if (f2Sel) f2Sel.classList.add('danger');
+      showInlineError('Select Fabric 2 type.', f2Sel || null);
+      if (typeof validateCanCalculate === 'function') validateCanCalculate();
+      return;
+    }
+  }
 
   const det=calcDetailed();
   const totalW=det.totalWeight_g, totalGRS=det.totalGRS_g;
@@ -891,6 +875,29 @@ function buildSkuHTML(calc){
   const name = (calc?.name||'SKU');
   const fillLines = (calc?.fill?.lines||[]).map(r=>`<tr><td>${r.idx}</td><td>${r.code}</td><td style="text-align:right">${(r.prcnt*100).toFixed(1)}%</td><td style="text-align:right">${r.grams.toFixed(3)}</td></tr>`).join('') || '<tr><td colspan="4" class="small">No filling lines.</td></tr>';
   const decision = calc?.decision ? decisionBadgeHtml(calc.decision) : '';
+  const safeInitScript = [
+    '<script>',
+    '// --- Safety re-init: repopulate fabric/fibre dropdowns even if earlier init was skipped ---',
+    '(function(){',
+    '  let __safeInitRan = false;',
+    '  window.__safeInitOnce = function(){',
+    '    if (__safeInitRan) return;',
+    '    __safeInitRan = true;',
+    '    try{ populateBindingCodes && populateBindingCodes(); }catch(e){}',
+    '    try{ populateFabricTypes && populateFabricTypes(); }catch(e){}',
+    '    try{ initFibreDropdown && initFibreDropdown(); }catch(e){}',
+    '    try{ renderAutoFillingTable && renderAutoFillingTable(); }catch(e){}',
+    '    try{ validateCanCalculate && validateCanCalculate(); }catch(e){}',
+    '  };',
+    '  if (document.readyState !== \'loading\'){ __safeInitOnce(); }',
+    '  window.addEventListener(\'DOMContentLoaded\', __safeInitOnce);',
+    '  window.addEventListener(\'load\', __safeInitOnce);',
+    '  setTimeout(__safeInitOnce, 200);',
+    '  setTimeout(__safeInitOnce, 800);',
+    '})();',
+    '</scr' + 'ipt>'
+  ].join('\n');
+
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>SKU Sheet - ${name}</title>
 <style>
@@ -942,26 +949,7 @@ thead th{background:#F7F6F4}
   <div class="footer">Auto-generated SKU sheet • ${new Date().toLocaleString()}</div>
 </div>
 
-<script>
-// --- Safety re-init: repopulate fabric/fibre dropdowns even if earlier init was skipped ---
-(function(){
-  let __safeInitRan = false;
-  window.__safeInitOnce = function(){
-    if (__safeInitRan) return;
-    __safeInitRan = true;
-    try{ populateBindingCodes && populateBindingCodes(); }catch(e){}
-    try{ populateFabricTypes && populateFabricTypes(); }catch(e){}
-    try{ initFibreDropdown && initFibreDropdown(); }catch(e){}
-    try{ renderAutoFillingTable && renderAutoFillingTable(); }catch(e){}
-    try{ validateCanCalculate && validateCanCalculate(); }catch(e){}
-  };
-  if (document.readyState !== 'loading'){ __safeInitOnce(); }
-  window.addEventListener('DOMContentLoaded', __safeInitOnce);
-  window.addEventListener('load', __safeInitOnce);
-  setTimeout(__safeInitOnce, 200);
-  setTimeout(__safeInitOnce, 800);
-})();
-</script>
+${safeInitScript}
 
 </body></html>`;
 }
@@ -1042,22 +1030,34 @@ function validateCanCalculate(){
 
   // --- Name ---
   const nameEl = document.getElementById('productName');
-  const nameOk = (nameEl.value || '').trim().length > 0;
-  if(nameOk){ nameEl.classList.remove('danger'); } else { nameEl.classList.add('danger'); }
-  const note = document.getElementById('productNameNote'); if (note) note.style.display = nameOk ? 'none' : 'block';
+  const nameOk = !!(nameEl && (nameEl.value || '').trim().length > 0);
+  if (nameEl){
+    if (nameOk){ nameEl.classList.remove('danger'); }
+    else { nameEl.classList.add('danger'); }
+  }
+  const note = document.getElementById('productNameNote');
+  if (note) note.style.display = nameOk ? 'none' : 'block';
 
   // --- Fabrics ---
   const f1Sel = document.getElementById('fabric1Type');
   const f1Ok = !!(f1Sel && f1Sel.value);
   const help1 = document.getElementById('fabric1Help');
-  if(!f1Ok){ f1Sel.classList.add('danger'); if(help1) help1.style.display='block'; } else { f1Sel.classList.remove('danger'); if(help1) help1.style.display='none'; }
+  if (f1Sel){
+    if (f1Ok){ f1Sel.classList.remove('danger'); if (help1) help1.style.display='none'; }
+    else { f1Sel.classList.add('danger'); if (help1) help1.style.display='block'; }
+  }
   setFabricDetailsVisibility(1);
 
-  const numFabs = document.getElementById('numFabrics').value;
-  let f2Ok = true; const f2Sel = document.getElementById('fabric2Type');
+  const numFabsEl = document.getElementById('numFabrics');
+  const numFabs = numFabsEl ? numFabsEl.value : '1';
+  const f2Sel = document.getElementById('fabric2Type');
   const f2Help = document.getElementById('fabric2Help');
+  let f2Ok = true;
   if (numFabs === '2'){ f2Ok = !!(f2Sel && f2Sel.value); }
-  if (f2Sel){ if (numFabs === '2' && !f2Ok){ f2Sel.classList.add('danger'); if(f2Help) f2Help.style.display='block'; } else { f2Sel.classList.remove('danger'); if(f2Help) f2Help.style.display='none'; } }
+  if (f2Sel){
+    if (numFabs === '2' && !f2Ok){ f2Sel.classList.add('danger'); if (f2Help) f2Help.style.display='block'; }
+    else { f2Sel.classList.remove('danger'); if (f2Help) f2Help.style.display='none'; }
+  }
   setFabricDetailsVisibility(2);
 
   // --- Liner GSM mandatory when liner is included ---
@@ -1066,25 +1066,22 @@ function validateCanCalculate(){
   if (includeLiner && includeLiner.checked){
     const linerGSM = document.getElementById('linerGSM');
     const linerHelp = document.getElementById('linerGSMHelp');
-    const v = parseFloat(linerGSM && linerGSM.value);
-    linerOk = !!(linerGSM && !isNaN(v) && v > 0);
-    if (!linerOk){
-      if (linerGSM) linerGSM.classList.add('danger');
-      if (linerHelp) linerHelp.style.display='block';
-    } else {
-      if (linerGSM) linerGSM.classList.remove('danger');
-      if (linerHelp) linerHelp.style.display='none';
+    const value = parseFloat(linerGSM && linerGSM.value);
+    linerOk = !!(linerGSM && !isNaN(value) && value > 0);
+    if (linerGSM){
+      if (linerOk){ linerGSM.classList.remove('danger'); }
+      else { linerGSM.classList.add('danger'); }
     }
+    if (linerHelp) linerHelp.style.display = linerOk ? 'none' : 'block';
   } else {
-    // clear any previous error styling
     const linerGSM = document.getElementById('linerGSM');
     const linerHelp = document.getElementById('linerGSMHelp');
     if (linerGSM) linerGSM.classList.remove('danger');
-    if (linerHelp) linerHelp.style.display='none';
+    if (linerHelp) linerHelp.style.display = 'none';
   }
 
   // --- Binding mandatory when finish=Bound Duvets OR Include Binding is on ---
-  validateBindingSelect();
+  if (typeof validateBindingSelect === 'function') validateBindingSelect();
   let bindingOk = true;
   try {
     const finishSel = document.getElementById('finishType');
@@ -1093,60 +1090,15 @@ function validateCanCalculate(){
     const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
     if (needsBinding){
       bindingOk = !!(bindSel && bindSel.value);
-      if (!bindingOk && bindSel) bindSel.classList.add('danger'); else if (bindSel) bindSel.classList.remove('danger');
+      if (bindSel){
+        if (bindingOk){ bindSel.classList.remove('danger'); }
+        else { bindSel.classList.add('danger'); }
+      }
     }
   } catch(e){ bindingOk = true; }
 
-  const ok = nameOk && f1Ok && f2Ok  && bindingOk;
+  const ok = nameOk && f1Ok && f2Ok && linerOk && bindingOk;
   if (calcBtn) calcBtn.disabled = !ok;
-}
-else {
-      if (linerGSM) linerGSM.classList.remove('danger');
-      if (linerHelp) linerHelp.style.display='none';
-    }
-  } else {
-    // if not included, clear any previous error styling
-    const linerGSM = document.getElementById('linerGSM');
-    const linerHelp = document.getElementById('linerGSMHelp');
-    if (linerGSM) linerGSM.classList.remove('danger');
-    if (linerHelp) linerHelp.style.display='none';
-  }
-
-  } else { nameEl.classList.add('danger'); }
-  const note = document.getElementById('productNameNote'); if (note) note.style.display = nameOk ? 'none' : 'block';
-
-  const f1Sel = document.getElementById('fabric1Type');
-  const f1Ok = !!(f1Sel && f1Sel.value);
-  const help1 = document.getElementById('fabric1Help');
-  if(!f1Ok){ f1Sel.classList.add('danger'); if(help1) help1.style.display='block'; } else { f1Sel.classList.remove('danger'); if(help1) help1.style.display='none'; }
-  setFabricDetailsVisibility(1);
-
-  const numFabs = document.getElementById('numFabrics').value;
-  let f2Ok = true; const f2Sel = document.getElementById('fabric2Type');
-  if (numFabs === '2'){ f2Ok = !!(f2Sel && f2Sel.value); }
-  const f2Help = document.getElementById('fabric2Help');
-  if (f2Sel){ if (numFabs === '2' && !f2Ok){ f2Sel.classList.add('danger'); if(f2Help) f2Help.style.display='block'; } else { f2Sel.classList.remove('danger'); if(f2Help) f2Help.style.display='none'; } }
-  setFabricDetailsVisibility(2);
-
-  
-validateBindingSelect();
-// Binding mandatory rule
-let bindingOk = true;
-try {
-  const finishSel = document.getElementById('finishType');
-  const includeBinding = document.getElementById('includeBinding');
-  const bindSel = document.getElementById('bindingCode');
-  const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
-  if (needsBinding){
-    bindingOk = !!(bindSel && bindSel.value);
-    if (!bindingOk && bindSel) bindSel.classList.add('danger');
-    else if (bindSel) bindSel.classList.remove('danger');
-  }
-} catch(e){ bindingOk = true; }
-
-const ok = nameOk && f1Ok && f2Ok && bindingOk;
-if (calcBtn) calcBtn.disabled = !ok;
-
 }
 
 /* ===== Reset & init ===== */
