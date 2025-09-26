@@ -875,6 +875,29 @@ function buildSkuHTML(calc){
   const name = (calc?.name||'SKU');
   const fillLines = (calc?.fill?.lines||[]).map(r=>`<tr><td>${r.idx}</td><td>${r.code}</td><td style="text-align:right">${(r.prcnt*100).toFixed(1)}%</td><td style="text-align:right">${r.grams.toFixed(3)}</td></tr>`).join('') || '<tr><td colspan="4" class="small">No filling lines.</td></tr>';
   const decision = calc?.decision ? decisionBadgeHtml(calc.decision) : '';
+  const safeInitScript = [
+    '<script>',
+    '// --- Safety re-init: repopulate fabric/fibre dropdowns even if earlier init was skipped ---',
+    '(function(){',
+    '  let __safeInitRan = false;',
+    '  window.__safeInitOnce = function(){',
+    '    if (__safeInitRan) return;',
+    '    __safeInitRan = true;',
+    '    try{ populateBindingCodes && populateBindingCodes(); }catch(e){}',
+    '    try{ populateFabricTypes && populateFabricTypes(); }catch(e){}',
+    '    try{ initFibreDropdown && initFibreDropdown(); }catch(e){}',
+    '    try{ renderAutoFillingTable && renderAutoFillingTable(); }catch(e){}',
+    '    try{ validateCanCalculate && validateCanCalculate(); }catch(e){}',
+    '  };',
+    '  if (document.readyState !== \'loading\'){ __safeInitOnce(); }',
+    '  window.addEventListener(\'DOMContentLoaded\', __safeInitOnce);',
+    '  window.addEventListener(\'load\', __safeInitOnce);',
+    '  setTimeout(__safeInitOnce, 200);',
+    '  setTimeout(__safeInitOnce, 800);',
+    '})();',
+    '</scr' + 'ipt>'
+  ].join('\n');
+
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>SKU Sheet - ${name}</title>
 <style>
@@ -926,26 +949,7 @@ thead th{background:#F7F6F4}
   <div class="footer">Auto-generated SKU sheet • ${new Date().toLocaleString()}</div>
 </div>
 
-<script>
-// --- Safety re-init: repopulate fabric/fibre dropdowns even if earlier init was skipped ---
-(function(){
-  let __safeInitRan = false;
-  window.__safeInitOnce = function(){
-    if (__safeInitRan) return;
-    __safeInitRan = true;
-    try{ populateBindingCodes && populateBindingCodes(); }catch(e){}
-    try{ populateFabricTypes && populateFabricTypes(); }catch(e){}
-    try{ initFibreDropdown && initFibreDropdown(); }catch(e){}
-    try{ renderAutoFillingTable && renderAutoFillingTable(); }catch(e){}
-    try{ validateCanCalculate && validateCanCalculate(); }catch(e){}
-  };
-  if (document.readyState !== 'loading'){ __safeInitOnce(); }
-  window.addEventListener('DOMContentLoaded', __safeInitOnce);
-  window.addEventListener('load', __safeInitOnce);
-  setTimeout(__safeInitOnce, 200);
-  setTimeout(__safeInitOnce, 800);
-})();
-</script>
+${safeInitScript}
 
 </body></html>`;
 }
