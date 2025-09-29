@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GRS Duvet Calculator — Fabrics fixed, full bindings, no PDF</title>
+<title>GRS Duvet Calculator</title>
 
 <!-- libs -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -104,7 +104,7 @@
     <div class="row">
       <label for="productName">SKU <span class="chip">required</span></label>
       <div>
-        <input type="text" id="productName" placeholder="e.g. Smartdown 10.5 S" oninput="validateCanCalculate()">
+        <input type="text" id="productName" placeholder="e.g. Smartdown 10.5 Single" oninput="validateCanCalculate()">
         <div class="inline-note" id="productNameNote">Enter a name to enable Calculate.</div>
       </div>
     </div>
@@ -189,7 +189,7 @@
           <option>15.0</option>
           <option value="custom">Custom…</option>
         </select>
-        <input id="togCustom" type="number" inputmode="decimal" step="0.1" min="1" style="width:120px;display:none" placeholder="e.g. 11.2" oninput="refreshDerivedDebounced()" />
+        <input id="togCustom" type="number" inputmode="decimal" step="0.1" min="1" style="width:120px;display:none" placeholder="e.g. 2.5" oninput="refreshDerivedDebounced()" />
       </div>
     </div>
     <div class="row">
@@ -212,7 +212,7 @@
     <h3>🧯 Lining</h3>
     <div class="row"><label for="includeLiner">Include?</label><input type="checkbox" id="includeLiner" onchange="toggleLiningDetailed()"></div>
     <div id="linerDetailedFields" style="display:none">
-      <div class="row"><label for="linerGSM" id="linerGSMLabel">Liner GSM</label><input type="number" id="linerGSM" min="0" step="1" oninput="onLinerGSMInput()" placeholder="e.g. 23"><div id="linerGSMHelp" class="error-note" style="display:none">Enter lining GSM.</div></div>
+      <div class="row"><label for="linerGSM" id="linerGSMLabel">Liner GSM</label><input type="number" id="linerGSM" min="0" step="1" oninput="onLinerGSMInput()" placeholder="e.g. 15"><div id="linerGSMHelp" class="error-note" style="display:none">Enter lining GSM.</div></div>
       <div class="row" id="linerSideRow" style="display:none">
         <label for="linerCoverage">Liner coverage</label>
         <select id="linerCoverage">
