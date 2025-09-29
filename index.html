@@ -149,7 +149,7 @@
     </div>
     <div class="row fabric1-detail" style="display:none"><label for="fabric1GSM">GSM <span class="inline-note">g/m²</span></label><input inputmode="decimal" type="number" id="fabric1GSM" value="0" min="0" step="1" oninput="refreshDerivedDebounced()"></div>
     <div class="row fabric1-detail" style="display:none"><label>Common GSMs</label><div id="fabric1GSMChips" class="hint"></div></div>
-    <div class="row fabric1-detail" style="display:none"><label for="fabric1IsGRS">Is GRS?</label><input type="checkbox" id="fabric1IsGRS" onchange="refreshDerivedDebounced()"></div>
+    <div class="row fabric1-detail" id="fabric1IsGRSRow" style="display:none"><label for="fabric1IsGRS">Is GRS?</label><input type="checkbox" id="fabric1IsGRS" onchange="refreshDerivedDebounced()"></div>
   </section>
 
   <!-- Fabric 2 -->
@@ -164,7 +164,7 @@
     </div>
     <div class="row fabric2-detail" style="display:none"><label for="fabric2GSM">GSM <span class="inline-note">g/m²</span></label><input inputmode="decimal" type="number" id="fabric2GSM" value="0" min="0" step="1" oninput="refreshDerivedDebounced()"></div>
     <div class="row fabric2-detail" style="display:none"><label>Common GSMs</label><div id="fabric2GSMChips" class="hint"></div></div>
-    <div class="row fabric2-detail" style="display:none"><label for="fabric2IsGRS">Is GRS?</label><input type="checkbox" id="fabric2IsGRS" onchange="refreshDerivedDebounced()"></div>
+    <div class="row fabric2-detail" id="fabric2IsGRSRow" style="display:none"><label for="fabric2IsGRS">Is GRS?</label><input type="checkbox" id="fabric2IsGRS" onchange="refreshDerivedDebounced()"></div>
   </section>
 
   <section class="section">
@@ -477,11 +477,23 @@ function populateFabricTypes /*patched*/(){
   });
 }
 function setFabricDetailsVisibility(idx){
-  const type = (document.getElementById('fabric'+idx+'Type').value||'');
+  const typeEl = document.getElementById('fabric'+idx+'Type');
+  const type = (typeEl?.value || '').trim();
   const show = !!type;
   document.querySelectorAll('.fabric'+idx+'-detail').forEach(el=>{
     el.style.display = show ? '' : 'none';
   });
+
+  const grsRow = document.getElementById('fabric'+idx+'IsGRSRow');
+  const grsCheckbox = document.getElementById('fabric'+idx+'IsGRS');
+  if (grsRow){
+    const isPureCotton = type.toLowerCase() === 'cotton';
+    const shouldShowGRS = show && !isPureCotton;
+    grsRow.style.display = shouldShowGRS ? '' : 'none';
+    if (!shouldShowGRS && grsCheckbox){
+      grsCheckbox.checked = false;
+    }
+  }
 }
 function onFabricTypeChange(idx){
   const t=document.getElementById('fabric'+idx+'Type').value;
