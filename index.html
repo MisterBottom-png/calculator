@@ -39,6 +39,7 @@
   .btn{appearance:none;border:1px solid transparent;background:var(--brand);color:#fff;font-weight:800;border-radius:12px;
     padding:10px 14px;cursor:pointer;font-size:14px;box-shadow:0 2px 0 rgba(0,0,0,.12)}
   .btn.secondary{background:#fff;color:var(--brand)}
+  .btn.small{padding:8px 12px;font-size:13px}
   .menu{position:relative}
   .menu-toggle{appearance:none;border:1px solid transparent;background:#fff;color:var(--brand);font-weight:800;border-radius:12px;padding:10px 14px;cursor:pointer;font-size:14px;box-shadow:0 2px 0 rgba(0,0,0,.12)}
   .menu-list{position:absolute;right:0;top:110%;min-width:220px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.14);padding:6px;display:none;z-index:50}
@@ -71,6 +72,19 @@
   .inline-note{font-size:12px;color:#666}
   .error-note{font-size:12px;color:var(--danger);margin-top:4px}
   .danger{border-color:var(--danger)!important;background:var(--danger-bg)}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(20,21,21,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:200}
+  .modal-backdrop.open{display:flex}
+  .modal-card{background:#fff;border-radius:16px;max-width:620px;width:100%;padding:20px 22px;box-shadow:0 18px 48px rgba(0,0,0,.18)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px}
+  .form-actions{display:flex;align-items:flex-end}
+  .table-scroll{max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:12px}
+  .table-compact th,.table-compact td{padding:6px 8px;font-size:12px}
+  .table-compact td.right{text-align:right;white-space:nowrap}
+  .badge-muted{display:inline-block;background:#f0f0f0;color:#555;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700}
+  .link-btn{background:transparent;border:0;color:var(--brand);font-weight:700;cursor:pointer;padding:4px 8px;border-radius:6px}
+  .link-btn:hover{background:rgba(66,66,66,.08)}
+  body.modal-open{overflow:hidden}
   @media(max-width:900px){ .stickybar{ position: sticky; bottom: 0; background: #fff; padding: 12px; z-index: 10; border-top:1px solid var(--border); } }
 </style>
 
@@ -88,16 +102,59 @@
     <div style="flex:1 1 auto"><h1>GRS Duvet Calculator</h1></div>
     <div class="toolbar">
       <button class="btn secondary" id="resetBtn" title="Clear inputs and results">Reset</button>
+      <div class="menu" id="adminMenu">
+        <button class="menu-toggle" onclick="toggleMenu(event,'adminMenu')">Admin ▾</button>
+        <div class="menu-list" role="menu" aria-label="Admin options">
+          <button class="menu-item" onclick="openAdminPanel(); closeMenu('adminMenu')">Manage bias codes<span>→</span></button>
+        </div>
+      </div>
       <div class="menu" id="exportMenu">
-        <button class="menu-toggle" onclick="toggleMenu(event)">Export ▾</button>
+        <button class="menu-toggle" onclick="toggleMenu(event,'exportMenu')">Export ▾</button>
         <div class="menu-list" role="menu" aria-label="Export options">
-          <button class="menu-item" onclick="exportCSV(); closeMenu()">CSV <span>↧</span></button>
-          <button class="menu-item" onclick="exportSkuHTML(); closeMenu()">SKU Sheet (HTML) <span>↧</span></button>
-          <button class="menu-item" onclick="exportSkuPNG(); closeMenu()">SKU PNG <span>↧</span></button>
+          <button class="menu-item" onclick="exportCSV(); closeMenu('exportMenu')">CSV <span>↧</span></button>
+          <button class="menu-item" onclick="exportSkuHTML(); closeMenu('exportMenu')">SKU Sheet (HTML) <span>↧</span></button>
+          <button class="menu-item" onclick="exportSkuPNG(); closeMenu('exportMenu')">SKU PNG <span>↧</span></button>
         </div>
       </div>
     </div>
   </header>
+
+  <div id="adminOverlay" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="adminTitle" style="margin:0">Bias codes admin</h2>
+        <button type="button" class="btn secondary small" onclick="closeAdminPanel()">Close</button>
+      </div>
+      <p class="hint" id="adminIntro">Add, update, or remove binding bias codes and their g/m weights. Changes are saved in this browser.</p>
+      <form class="form-grid" id="adminBiasForm" onsubmit="return addBiasCode(event);">
+        <div>
+          <label for="adminBiasCode">Bias code</label>
+          <input type="text" id="adminBiasCode" autocomplete="off" placeholder="e.g. A042NEWBIAS">
+        </div>
+        <div>
+          <label for="adminBiasWeight">Weight (g/m)</label>
+          <input type="number" id="adminBiasWeight" step="0.01" min="0" placeholder="e.g. 3.50">
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Save code</button>
+        </div>
+      </form>
+      <div class="error-note" id="adminBiasError" style="display:none"></div>
+      <div class="table-scroll">
+        <table class="table-compact" aria-describedby="adminIntro">
+          <thead>
+            <tr>
+              <th>Bias code</th>
+              <th class="right">Weight (g/m)</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="adminBindingList"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <section class="section">
     <h3>📦 Product</h3>
@@ -380,7 +437,7 @@ window.addEventListener('load', () => {
 
 <script>
 /* ===== Data sets (from user) ===== */
-const BINDING_GPM = {
+const DEFAULT_BINDING_GPM = {
   "A05MMSIMBAPIPING": 4.93,
   "A042MMFPHBIAS": 3.25,
   "A042MMPCBIAS": 4.55,
@@ -405,6 +462,83 @@ const BINDING_GPM = {
   "A042MMTURQBIAS": 3.7,
   "A042MMPNKBIAS": 4.2
 };
+const BINDING_GPM = {};
+const bindingDefaultCodes = new Set(Object.keys(DEFAULT_BINDING_GPM));
+const BINDING_STORAGE_KEY = 'grs_binding_overrides_v1';
+let bindingOverrides = { custom:{}, removed:[] };
+
+function resetBindingToDefaults(){
+  Object.keys(BINDING_GPM).forEach(code=>{ delete BINDING_GPM[code]; });
+  Object.entries(DEFAULT_BINDING_GPM).forEach(([code,val])=>{ BINDING_GPM[code] = val; });
+}
+
+function loadBindingOverrides(){
+  if (typeof localStorage === 'undefined') return;
+  try{
+    const raw = localStorage.getItem(BINDING_STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(parsed && typeof parsed === 'object'){
+      const custom = {};
+      if(parsed.custom && typeof parsed.custom === 'object'){
+        Object.entries(parsed.custom).forEach(([code,val])=>{
+          if(typeof code === 'string'){
+            const num = Number(val);
+            if(Number.isFinite(num) && num > 0){
+              custom[code] = num;
+            }
+          }
+        });
+      }
+      const removed = Array.isArray(parsed.removed) ? parsed.removed.filter(code=>typeof code === 'string' && code) : [];
+      bindingOverrides = {
+        custom,
+        removed: Array.from(new Set(removed))
+      };
+    }
+  } catch(e){
+    bindingOverrides = { custom:{}, removed:[] };
+  }
+}
+
+function saveBindingOverrides(){
+  if (typeof localStorage === 'undefined') return;
+  try{
+    const payload = {
+      custom: bindingOverrides.custom,
+      removed: bindingOverrides.removed
+    };
+    localStorage.setItem(BINDING_STORAGE_KEY, JSON.stringify(payload));
+  } catch(e){}
+}
+
+function applyBindingOverrides(){
+  resetBindingToDefaults();
+  let mutated = false;
+  (bindingOverrides.removed || []).forEach(code=>{
+    if(typeof code === 'string' && code){
+      delete BINDING_GPM[code];
+    }
+  });
+  Object.entries(bindingOverrides.custom || {}).forEach(([code,val])=>{
+    if(typeof code === 'string'){
+      const num = Number(val);
+      if(Number.isFinite(num) && num > 0){
+        if(bindingDefaultCodes.has(code) && DEFAULT_BINDING_GPM[code] === num){
+          delete bindingOverrides.custom[code];
+          mutated = true;
+        } else {
+          BINDING_GPM[code] = num;
+        }
+      }
+    }
+  });
+  if(mutated){ saveBindingOverrides(); }
+}
+
+resetBindingToDefaults();
+loadBindingOverrides();
+applyBindingOverrides();
 const FABRIC_GSM = {
   "Cotton/Tencel": { mode_gsm:110, common_gsms:[110] },
   "Cotton":        { mode_gsm:133, common_gsms:[100,115,133,230] },
@@ -428,10 +562,17 @@ const FIBRE_TABLE = [
 /* ===== UI helpers ===== */
 function populateBindingCodes(){
   const sel=document.getElementById('bindingCode'); if(!sel) return;
+  const prev=sel.value;
   sel.innerHTML='<option value="">Select binding</option>';
-  Object.keys(BINDING_GPM).sort().forEach(code=>{
+  Object.keys(BINDING_GPM).sort((a,b)=>a.localeCompare(b)).forEach(code=>{
     const o=document.createElement('option'); o.value=code; o.textContent=code; sel.appendChild(o);
   });
+  const restored = (prev && Object.prototype.hasOwnProperty.call(BINDING_GPM, prev)) ? prev : '';
+  if(restored){ sel.value = restored; }
+  else { sel.value=''; }
+  if(restored !== prev){
+    if(typeof onBindingCodeChange === 'function'){ onBindingCodeChange(); }
+  }
 }
 function validateBindingSelect(){
   const include = document.getElementById('includeBinding').checked;
@@ -460,6 +601,143 @@ function onBindingCodeChange(){
     if (lbl){ lbl.classList.remove('label-muted'); }
   }
   validateBindingSelect();
+}
+
+function formatBindingWeight(value){
+  const num = Number(value);
+  if(!Number.isFinite(num)) return '0';
+  return num.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
+}
+
+function escapeHtml(value){
+  return String(value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function setAdminError(message){
+  const el = document.getElementById('adminBiasError');
+  if(!el) return;
+  if(message){
+    el.textContent = message;
+    el.style.display = 'block';
+  } else {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+}
+
+function renderBindingAdminTable(){
+  const tbody = document.getElementById('adminBindingList');
+  if(!tbody) return;
+  const codes = Object.keys(BINDING_GPM).sort((a,b)=>a.localeCompare(b));
+  if(!codes.length){
+    tbody.innerHTML = '<tr><td colspan="4" class="inline-note">No bias codes configured.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = codes.map(code=>{
+    const safeCode = escapeHtml(code);
+    const weightText = formatBindingWeight(BINDING_GPM[code]);
+    const isDefault = bindingDefaultCodes.has(code);
+    const hasOverride = isDefault && Object.prototype.hasOwnProperty.call(bindingOverrides.custom || {}, code);
+    const statusLabel = isDefault ? (hasOverride ? 'Default (overridden)' : 'Default') : 'Custom';
+    const status = `<span class="badge-muted">${statusLabel}</span>`;
+    return `<tr><td>${safeCode}</td><td class="right">${escapeHtml(weightText)}</td><td>${status}</td><td class="right"><button type="button" class="link-btn" onclick="removeBiasCode(${JSON.stringify(code)})">Remove</button></td></tr>`;
+  }).join('');
+}
+
+function openAdminPanel(){
+  closeMenu('adminMenu');
+  renderBindingAdminTable();
+  const overlay = document.getElementById('adminOverlay');
+  if(overlay){
+    overlay.classList.add('open');
+    document.body.classList.add('modal-open');
+    setAdminError('');
+    window.setTimeout(()=>{
+      const codeInput = document.getElementById('adminBiasCode');
+      if(codeInput){ codeInput.focus(); }
+    }, 50);
+  }
+}
+
+function closeAdminPanel(){
+  const overlay = document.getElementById('adminOverlay');
+  if(overlay){
+    overlay.classList.remove('open');
+    document.body.classList.remove('modal-open');
+  }
+  setAdminError('');
+  const form = document.getElementById('adminBiasForm');
+  if(form && typeof form.reset === 'function'){ form.reset(); }
+}
+
+function addBiasCode(ev){
+  if(ev && typeof ev.preventDefault === 'function'){ ev.preventDefault(); }
+  const codeInput = document.getElementById('adminBiasCode');
+  const weightInput = document.getElementById('adminBiasWeight');
+  if(!codeInput || !weightInput) return false;
+  const rawCode = (codeInput.value || '').trim();
+  const weight = Number(weightInput.value);
+  if(!rawCode){
+    setAdminError('Enter a bias code.');
+    return false;
+  }
+  if(!Number.isFinite(weight) || weight <= 0){
+    setAdminError('Enter a weight greater than 0.');
+    return false;
+  }
+  const code = rawCode.toUpperCase();
+  BINDING_GPM[code] = weight;
+  if(!bindingOverrides || typeof bindingOverrides !== 'object'){ bindingOverrides = { custom:{}, removed:[] }; }
+  if(!bindingOverrides.custom || typeof bindingOverrides.custom !== 'object'){ bindingOverrides.custom = {}; }
+  if(bindingDefaultCodes.has(code) && DEFAULT_BINDING_GPM[code] === weight){
+    delete bindingOverrides.custom[code];
+  } else {
+    bindingOverrides.custom[code] = weight;
+  }
+  bindingOverrides.removed = Array.isArray(bindingOverrides.removed) ? bindingOverrides.removed.filter(c=>c !== code) : [];
+  saveBindingOverrides();
+  populateBindingCodes();
+  renderBindingAdminTable();
+  const select = document.getElementById('bindingCode');
+  if(select && select.value === code && typeof onBindingCodeChange === 'function'){ onBindingCodeChange(); }
+  setAdminError('');
+  codeInput.value = '';
+  weightInput.value = '';
+  codeInput.focus();
+  return false;
+}
+
+function removeBiasCode(code){
+  if(!code) return;
+  if(!window.confirm(`Remove bias code "${code}"?`)) return;
+  if(Object.prototype.hasOwnProperty.call(BINDING_GPM, code)){
+    delete BINDING_GPM[code];
+  }
+  if(!bindingOverrides || typeof bindingOverrides !== 'object'){ bindingOverrides = { custom:{}, removed:[] }; }
+  if(bindingOverrides.custom && Object.prototype.hasOwnProperty.call(bindingOverrides.custom, code)){
+    delete bindingOverrides.custom[code];
+  }
+  if(!Array.isArray(bindingOverrides.removed)) bindingOverrides.removed = [];
+  if(bindingDefaultCodes.has(code)){
+    if(!bindingOverrides.removed.includes(code)){
+      bindingOverrides.removed.push(code);
+    }
+  } else {
+    bindingOverrides.removed = bindingOverrides.removed.filter(c=>c !== code);
+  }
+  saveBindingOverrides();
+  populateBindingCodes();
+  renderBindingAdminTable();
+  const select = document.getElementById('bindingCode');
+  if(select && select.value === code){
+    select.value='';
+    if(typeof onBindingCodeChange === 'function'){ onBindingCodeChange(); }
+  }
 }
 
 function populateFabricTypes /*patched*/(){
@@ -861,16 +1139,28 @@ function calculateAll(){
   };
 }
 
-/* ===== Export dropdown ===== */
-function toggleMenu(ev){
-  ev?.stopPropagation?.();
-  const m=document.getElementById('exportMenu');
-  m.classList.toggle('open');
+/* ===== Menu helpers ===== */
+function toggleMenu(ev,id){
+  if(ev && typeof ev.stopPropagation === 'function'){ ev.stopPropagation(); }
+  if(!id) return;
+  document.querySelectorAll('.menu').forEach(menu=>{
+    if(menu.id !== id){ menu.classList.remove('open'); }
+  });
+  const target = document.getElementById(id);
+  if(target){ target.classList.toggle('open'); }
 }
-function closeMenu(){ const m=document.getElementById('exportMenu'); m&&m.classList.remove('open'); }
+function closeMenu(id){
+  if(id){
+    const target = document.getElementById(id);
+    if(target){ target.classList.remove('open'); }
+  } else {
+    document.querySelectorAll('.menu').forEach(menu=>menu.classList.remove('open'));
+  }
+}
 document.addEventListener('click',function(e){
-  const m=document.getElementById('exportMenu'); if(!m) return;
-  if(!m.contains(e.target)) m.classList.remove('open');
+  document.querySelectorAll('.menu').forEach(menu=>{
+    if(!menu.contains(e.target)) menu.classList.remove('open');
+  });
 });
 
 /* ===== SKU EXPORT HELPERS (decision included) ===== */
@@ -1168,10 +1458,26 @@ window.addEventListener('load', function(){
 
   var reset = document.getElementById('resetBtn'); if (reset){ reset.addEventListener('click', resetAll); }
 
+  const adminOverlay = document.getElementById('adminOverlay');
+  if(adminOverlay){
+    adminOverlay.addEventListener('click', function(ev){
+      if(ev.target === adminOverlay){ closeAdminPanel(); }
+    });
+  }
+
   // One more sync pass
   syncLiningWithFabrics && syncLiningWithFabrics();
   syncLiningWithFinish && syncLiningWithFinish();
   syncFinishAndBindingUI && syncFinishAndBindingUI();
+});
+
+document.addEventListener('keydown', function(ev){
+  if(ev.key === 'Escape'){
+    const overlay = document.getElementById('adminOverlay');
+    if(overlay && overlay.classList.contains('open')){
+      closeAdminPanel();
+    }
+  }
 });
 </script>
 
