@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { PillowInputs, type PillowFormState } from "@/components/PillowInputs";
 import { PillowResults } from "@/components/PillowResults";
@@ -14,9 +14,31 @@ const defaultState: PillowFormState = {
   pct3: 20
 };
 
+const clampFinite = (value: number, min: number, max: number) => {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
+const normalizePcts = (state: PillowFormState) => {
+  const next1 = clampFinite(state.pct1, 0, 100);
+  const next2 = clampFinite(state.pct2, 0, 100 - next1);
+  const next3 = 100 - next1 - next2;
+  return { ...state, pct1: next1, pct2: next2, pct3: next3 };
+};
+
 export function PillowView() {
   const [state, setState] = useLocalStorageState<PillowFormState>("calc-pillow", defaultState);
   const { t } = useI18n();
+
+  useEffect(() => {
+    setState((prev) => {
+      const normalized = normalizePcts(prev);
+      if (normalized.pct1 === prev.pct1 && normalized.pct2 === prev.pct2 && normalized.pct3 === prev.pct3) {
+        return prev;
+      }
+      return normalized;
+    });
+  }, [setState]);
 
   const result = useMemo(
     () =>
