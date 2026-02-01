@@ -1,1507 +1,1191 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="auto">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GRS Duvet Calculator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title data-i18n="app.title">Duvet & Pillow – Simple Calculators</title>
+  <style>
+    /* =====================
+       Modern, fluid, accessible UI
+       ===================== */
+    @layer reset, tokens, base, components, utilities;
 
-<!-- libs -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    /* --- Reset --- */
+    @layer reset {
+      *, *::before, *::after { box-sizing: border-box; }
+      :where(html) { block-size: 100%; }
+      :where(body) { margin: 0; min-block-size: 100%; font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+      :where(img, svg) { display: block; max-inline-size: 100%; }
+      :where(button, input, select) { font: inherit; color: inherit; }
+      :where([hidden]) { display: none !important; }
+      :where(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+    }
 
-<style>
-  :root{
-    --brand:#424242;
-    --brand-2:#F6AA70;
-    --bg:#F7F6F4;
-    --card:#FFFFFF;
-    --muted:#61635f;
-    --border:#E4E3E0;
-    --ring:rgba(54,58,54,.35);
-    --danger:#a5282c;
-    --danger-bg:#fdecec;
+    /* --- Tokens & themes --- */
+    @layer tokens {
+      :root {
+        --bg: #0C0D0F;
+        --card: #14161A;
+        --text: #EDEFF2;
+        --muted: #97A0AE;
+        --line: #22262C;
+        --brand: #84CC16;
+        --accent: #A3E635;
+        --good: #22C55E;
+        --shadow: 0 10px 30px rgb(0 0 0 / .25);
+        --radius: 16px;
+        --radius-lg: 20px;
+        --space: clamp(12px, 1.5vw, 18px);
+        --space-lg: clamp(16px, 2.2vw, 24px);
+        --maxw: 1200px;
+        --ring: 0 0 0 1px var(--line) inset, 0 6px 30px rgb(0 0 0 / .15);
+        --glass: linear-gradient(180deg, rgb(255 255 255 / .05), rgb(255 255 255 / .02));
+        color-scheme: dark;
+      }
+      @media (prefers-color-scheme: light) {
+        html[data-theme="auto"]:root {
+          --bg: #F7F8FA;
+          --card: #FFFFFF;
+          --text: #0C0D0F;
+          --muted: #97A0AE;
+          --line: #E5E8EE;
+          --brand: #84CC16;
+          --accent: #A3E635;
+          --good: #22C55E;
+          --shadow: 0 10px 30px rgb(0 0 0 / .06);
+          color-scheme: light;
+        }
+      }
+      html[data-theme="light"]:root {
+        --bg: #F7F8FA;
+        --card: #FFFFFF;
+        --text: #0C0D0F;
+        --muted: #97A0AE;
+        --line: #E5E8EE;
+        --brand: #84CC16;
+        --accent: #A3E635;
+        --good: #22C55E;
+        --shadow: 0 10px 30px rgb(0 0 0 / .06);
+        color-scheme: light;
+      }
+      html[data-theme="dark"]:root {
+        --bg: #0C0D0F;
+        --card: #14161A;
+        --text: #EDEFF2;
+        --muted: #97A0AE;
+        --line: #22262C;
+        --brand: #84CC16;
+        --accent: #A3E635;
+        --good: #22C55E;
+        --shadow: 0 10px 30px rgb(0 0 0 / .25);
+        color-scheme: dark;
+      }
+
+      @property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+    }
+
+    /* --- Base layout --- */
+    @layer base {
+      body {
+        background: radial-gradient(60% 80% at 20% 0%, color-mix(in oklab, var(--card), var(--bg) 60%), var(--bg));
+        color: var(--text);
+        accent-color: var(--brand);
+      }
+      header.page {
+        position: sticky; top: 0; z-index: 10;
+        backdrop-filter: blur(8px);
+        background: color-mix(in oklab, var(--bg) 80%, transparent);
+        border-bottom: 1px solid var(--line);
+      }
+      .container { max-inline-size: var(--maxw); margin-inline: auto; padding-inline: clamp(12px, 2vw, 24px); }
+      .stack { display: grid; gap: var(--space); }
+      h1 { font-weight: 800; letter-spacing: .3px; margin: 0; font-size: clamp(22px, 2.6vw, 34px); }
+      p.lead { margin: 4px 0 0; color: var(--muted); font-size: clamp(14px, 1.5vw, 15px); }
+    }
+
+    /* --- Components --- */
+    @layer components {
+      .card {
+        background: var(--glass);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: var(--space);
+        box-shadow: var(--shadow);
+      }
+      .panel-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1.8fr;
+        gap: var(--space);
+        container-type: inline-size;
+      }
+      @container (max-width: 900px) { .panel-grid { grid-template-columns: 1fr; } }
+
+      .controls-grid { display: grid; gap: var(--space); grid-template-columns: repeat(12, 1fr); }
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+      .span-12 { grid-column: span 12; }
+
+      .field-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+
+      label { font-size: 12px; color: var(--muted); display:block; margin-block-end: 6px; }
+      input, select { inline-size: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: color-mix(in oklab, var(--card), var(--bg) 20%); color: inherit; outline: none; }
+      input[type="number"] { appearance: textfield; }
+
+      .toolbar { display:flex; align-items:center; gap: 8px; }
+      .btn {
+        display:inline-flex; align-items:center; gap:.5ch; border:1px solid var(--line);
+        background: linear-gradient(180deg, rgb(255 255 255 / .04), rgb(255 255 255 / .02));
+        padding: 8px 12px; border-radius: 999px; text-decoration:none; cursor:pointer;
+        box-shadow: var(--ring);
+      }
+      .btn:hover { transform: translateY(-1px); }
+      .btn:active { transform: translateY(0); }
+      .btn[aria-pressed="true"] { outline: 2px solid var(--brand); }
+      .pill { display:inline-block; padding:6px 12px; border-radius:999px; background: color-mix(in oklab, var(--card), var(--bg) 15%); border:1px solid var(--line); color: var(--text); font-size:13px; font-weight:600; text-shadow: 0 1px 1px rgba(0,0,0,.35); }
+      .tabs { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+      .tab {
+        cursor:pointer; border:1px solid var(--line); padding:8px 12px; border-radius:999px;
+        background: linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / .02));
+      }
+      .tab[aria-selected="true"] { outline:2px solid var(--brand); }
+      .kpis { display:grid; grid-template-columns: 1fr 1fr; gap: var(--space); }
+	  .kpiBox small{ display:block; color:var(--muted); font-size:12px; margin-block-end:6px }
+      .kpiBox strong{ font-size: clamp(18px, 2.4vw, 24px); }
+      .kpi { display:flex; align-items:baseline; gap:10px; }
+      .kpi .value { font-size: clamp(24px, 3vw, 34px); font-weight:800; letter-spacing:.4px; }
+      table { inline-size:100%; border-collapse: collapse; }
+      th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); }
+      th { color: var(--muted); font-weight:600; }
+      td.num { text-align:right; }
+      .muted { color: var(--muted); }
+      .fade-in { animation: fade .4s ease-out both; }
+    }
+
+    /* --- Utilities --- */
+    @layer utilities {
+      .sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      @keyframes fade { from { opacity: 0; transform: translateY(4px); } }
+      .hidden { display:none !important; }
+    }
+    select { font-size: 14px; }
+    @media (max-width: 540px){ select { font-size: 13px; } }
+  
+    /* Motion reduction */
+    @media (prefers-reduced-motion: reduce){
+      .fade-in { animation: none !important; }
+      .btn:hover { transform: none !important; }
+    }
+
+    /* Popovers & toasts */
+    [popover]{
+      background: var(--card);
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow);
+      color: var(--text);
+    }
+
+    /* Highlight when custom size fields are visible (parent-aware styling with :has()) */
+    @supports selector(:has(*)) {
+      #d-controls:has(#d-customDims:not([hidden])){
+        outline: 2px solid color-mix(in oklab, var(--accent), transparent 30%);
+      }
+    }
+
+    /* Hide "m² area" and "kg total fill" KPIs */
+    #d-area, #d-totalKg { display:none !important; }            /* hide the numbers */
+    #d-area + small, #d-totalKg + small { display:none !important; }  /* hide the labels */
+    @supports selector(:has(*)) {
+      #d-kpis .kpi:has(#d-area),
+      #d-kpis .kpi:has(#d-totalKg) { display:none !important; }
+    }
+
+    /* Pretty KPI pills for Base length & Roll width */
+    .kpis{ display:grid; gap:12px; }
+    .kpiBox{
+      border-radius: 18px;
+      padding: 16px 18px;
+      background: linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--brand) 55%, var(--card) 45%),
+        color-mix(in oklab, var(--brand) 75%, var(--bg) 25%)
+      );
+      box-shadow: 0 6px 20px rgba(0,0,0,.28) inset, 0 1px 0 rgba(255,255,255,.10);
+      border: 1px solid color-mix(in oklab, var(--brand) 80%, var(--line) 20%);
+    }
+    .kpiBox > small{
+      display:block;
+      color: #fff;
+      opacity: .95;
+      margin-bottom: 6px;
+      letter-spacing:.25px;
+      font-weight: 600;
+      text-shadow: 0 1px 1px rgba(0,0,0,.45);
+    }
+    .kpiBox > strong{
+      display:block;
+      color: #fff;
+      font-size: clamp(24px, 4.4vw, 34px);
+      line-height: 1.1;
+      font-weight: 900;
+      text-shadow: 0 2px 6px rgba(0,0,0,.45);
+    }
+/* Darken KPI pills in light mode so white text is readable */
+@media (prefers-color-scheme: light) {
+  html[data-theme="auto"] .kpiBox {
+    /* richer, darker green just for light theme */
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--brand) 40%, #000 60%),
+      color-mix(in oklab, var(--brand) 55%, #000 45%)
+    );
+    border-color: color-mix(in oklab, var(--brand) 70%, #000 30%);
   }
-  html,body{height:100%}
-  body{
-    font-family:Inter, Segoe UI, Roboto, Arial, sans-serif;
-    margin:0;color:#202121;
-    background: radial-gradient(1200px 400px at 50% -200px, #fff0, #0000),
-               linear-gradient(180deg, var(--bg), #fff 260px);
-  }
-  *{box-sizing:border-box}
-  .wrap{max-width:1100px;margin:28px auto 80px;padding:0 18px}
-  .app-head{background:var(--brand);color:#fff;border-radius:18px;padding:22px 22px 18px;
-    box-shadow:0 10px 36px rgba(0,0,0,.10), inset 0 -1px 0 rgba(255,255,255,.08);
-    display:flex;align-items:center;gap:16px}
-  h1{font-size:24px;margin:0}
-  .logo-wrap{background:var(--brand-2);border-radius:999px;padding:8px 16px;min-width:220px;display:flex;align-items:center;justify-content:center}
-  .pill-logo{font-weight:800;font-size:16px;color:var(--brand);white-space:nowrap;letter-spacing:.2px}
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap}
-  .btn{appearance:none;border:1px solid transparent;background:var(--brand);color:#fff;font-weight:800;border-radius:12px;
-    padding:10px 14px;cursor:pointer;font-size:14px;box-shadow:0 2px 0 rgba(0,0,0,.12)}
-  .btn.secondary{background:#fff;color:var(--brand)}
-  .btn.small{padding:8px 12px;font-size:13px}
-  .menu{position:relative}
-  .menu-toggle{appearance:none;border:1px solid transparent;background:#fff;color:var(--brand);font-weight:800;border-radius:12px;padding:10px 14px;cursor:pointer;font-size:14px;box-shadow:0 2px 0 rgba(0,0,0,.12)}
-  .menu-list{position:absolute;right:0;top:110%;min-width:220px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.14);padding:6px;display:none;z-index:50}
-  .menu.open .menu-list{display:block}
-  .menu-item{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;padding:10px 10px;border-radius:10px;cursor:pointer;font-weight:700}
-  .section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 16px 12px;box-shadow:0 1px 0 #fff inset, 0 1px 0 rgba(0,0,0,.02), 0 8px 28px rgba(0,0,0,.04);margin-top:16px}
-  .row{display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:center;margin:.42rem 0}
-  label{font-weight:700}
-  input,select{width:100%;border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;background:#fff}
-  fieldset{border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin:.6rem 0;background:linear-gradient(180deg,#faf9f8,#fff)}
-  legend{font-weight:800;padding:0 8px}
-  .chip{display:inline-block;background:var(--brand-2);color:#1f1f1f;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800}
-  .chip-btn{border:none;background:var(--brand-2);cursor:pointer;border-radius:999px;padding:5px 10px;margin:0 6px 6px 0}
-  .hint{color:var(--muted);font-size:12px;margin:.25rem 0 .6rem}
-  .result{margin-top:18px;padding:16px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#fafafa,#fff)}
-  .badge{display:inline-block;padding:.28rem .6rem;border-radius:9px;font-weight:800;font-size:.86rem;margin-right:.35rem}
-  .ok{background:#e9f6ee;color:#1a7f37;border:1px solid #d5eadc}
-  .warn{background:#fff7e6;color:#b8860b;border:1px solid #f3dfb3}
-  .no{background:#fdecec;color:#a5282c;border:1px solid #f5c3c7}
-  .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
-  @media(max-width:680px){ .stats{grid-template-columns:1fr} }
-  .stat{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff;box-shadow:0 1px 0 #fff inset}
-  .stat .k{font-size:12px;color:#666}
-  .stat .v{font-size:20px;font-weight:900;margin-top:4px;letter-spacing:.2px}
-  .stat .c{font-size:11px;color:#888;margin-top:2px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:13px}
-  thead th{background:#F7F6F4}
-  .right{text-align:right}
-  .inline-note{font-size:12px;color:#666}
-  .error-note{font-size:12px;color:var(--danger);margin-top:4px}
-  .danger{border-color:var(--danger)!important;background:var(--danger-bg)}
-  .modal-backdrop{position:fixed;inset:0;background:rgba(20,21,21,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:200}
-  .modal-backdrop.open{display:flex}
-  .modal-card{background:#fff;border-radius:16px;max-width:620px;width:100%;padding:20px 22px;box-shadow:0 18px 48px rgba(0,0,0,.18)}
-  .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px}
-  .form-actions{display:flex;align-items:flex-end}
-  .table-scroll{max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:12px}
-  .table-compact th,.table-compact td{padding:6px 8px;font-size:12px}
-  .table-compact td.right{text-align:right;white-space:nowrap}
-  .badge-muted{display:inline-block;background:#f0f0f0;color:#555;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700}
-  .link-btn{background:transparent;border:0;color:var(--brand);font-weight:700;cursor:pointer;padding:4px 8px;border-radius:6px}
-  .link-btn:hover{background:rgba(66,66,66,.08)}
-  body.modal-open{overflow:hidden}
-  @media(max-width:900px){ .stickybar{ position: sticky; bottom: 0; background: #fff; padding: 12px; z-index: 10; border-top:1px solid var(--border); } }
-</style>
+}
+html[data-theme="light"] .kpiBox {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--brand) 40%, #000 60%),
+    color-mix(in oklab, var(--brand) 55%, #000 45%)
+  );
+  border-color: color-mix(in oklab, var(--brand) 70%, #000 30%);
+}
 
-<script>
-/* ===== expose simple GRS detector for binding codes ===== */
-(function(){ function isGrs(code){ try{return /GRS/i.test((code||'')+'');}catch(e){return false;} }
-  Object.defineProperty(window,'isGRSBindingCode',{value:isGrs,writable:false,configurable:false});
-})();
-</script>
+/* keep the existing white text; just remove the glow in light mode */
+@media (prefers-color-scheme: light) {
+  html[data-theme="auto"] .kpiBox > small,
+  html[data-theme="auto"] .kpiBox > strong { text-shadow: none; }
+}
+html[data-theme="light"] .kpiBox > small,
+html[data-theme="light"] .kpiBox > strong { text-shadow: none; 
+}
+
+/* Stronger muted text for light mode */
+@media (prefers-color-scheme: light) {
+  html[data-theme="auto"]:root { --muted: #4B5563; } /* WCAG-friendly on #F7F8FA */
+}
+html[data-theme="light"]:root { --muted: #4B5563; }
+
+/* Make section headers a touch stronger in light mode */
+@media (prefers-color-scheme: light) {
+  html[data-theme="auto"] .card h3 { color: color-mix(in oklab, var(--text) 85%, var(--bg) 15%) !important; }
+}
+html[data-theme="light"] .card h3 { color: color-mix(in oklab, var(--text) 85%, var(--bg) 15%) !important; }
+
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="app-head">
-    <div class="logo-wrap"><span class="pill-logo">SomeHomewareCompany</span></div>
-    <div style="flex:1 1 auto"><h1>GRS Duvet Calculator</h1></div>
-    <div class="toolbar">
-      <button class="btn secondary" id="resetBtn" title="Clear inputs and results">Reset</button>
-      <div class="menu" id="adminMenu">
-        <button class="menu-toggle" onclick="toggleMenu(event,'adminMenu')">Admin ▾</button>
-        <div class="menu-list" role="menu" aria-label="Admin options">
-          <button class="menu-item" onclick="openAdminPanel(); closeMenu('adminMenu')">Manage bias codes<span>→</span></button>
+  <header class="page">
+    <div class="container" style="padding-block: 10px;">
+      <div class="toolbar" style="justify-content: space-between;">
+        <div>
+          <h1 data-i18n="hdr.title">🧮 Duvet & Pillow Calculators</h1>
+          <p class="lead" data-i18n="hdr.subtitle">Duvet (filling, fibre) and pillow (fibre) quick tools</p>
         </div>
-      </div>
-      <div class="menu" id="exportMenu">
-        <button class="menu-toggle" onclick="toggleMenu(event,'exportMenu')">Export ▾</button>
-        <div class="menu-list" role="menu" aria-label="Export options">
-          <button class="menu-item" onclick="exportCSV(); closeMenu('exportMenu')">CSV <span>↧</span></button>
-          <button class="menu-item" onclick="exportSkuHTML(); closeMenu('exportMenu')">SKU Sheet (HTML) <span>↧</span></button>
-          <button class="menu-item" onclick="exportSkuPNG(); closeMenu('exportMenu')">SKU PNG <span>↧</span></button>
+        <div class="toolbar">
+          <div class="tabs" role="tablist" aria-label="Calculator">
+            <button id="tab-duvet" class="tab" role="tab" aria-selected="true" aria-controls="panel-duvet" data-i18n="tabs.duvet">Duvet</button>
+            <button id="tab-pillow" class="tab" role="tab" aria-selected="false" aria-controls="panel-pillow" data-i18n="tabs.pillow">Pillow</button>
+          </div>
+          <div class="toolbar">
+            <button id="langBtn" class="btn" title="Language" data-i18n-title="a11y.lang" aria-label="Language">🌐 <span id="langBtnText">EN</span></button>
+            <button id="helpBtn" class="btn" popovertarget="helpPop" title="Help & shortcuts" data-i18n-title="btn.help.title">❔ <span data-i18n="btn.help">Help</span></button>
+            <button id="themeBtnGlobal" class="btn" aria-pressed="false" title="Toggle theme" data-i18n-title="btn.theme.title">
+              <span aria-hidden="true">🌗</span>
+              <span class="sr" data-i18n="btn.theme">Toggle theme</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </header>
-
-  <div id="adminOverlay" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
-    <div class="modal-card">
-      <div class="modal-head">
-        <h2 id="adminTitle" style="margin:0">Bias codes admin</h2>
-        <button type="button" class="btn secondary small" onclick="closeAdminPanel()">Close</button>
-      </div>
-      <p class="hint" id="adminIntro">Add, update, or remove binding bias codes and their g/m weights. Changes are saved in this browser.</p>
-      <form class="form-grid" id="adminBiasForm" onsubmit="return addBiasCode(event);">
-        <div>
-          <label for="adminBiasCode">Bias code</label>
-          <input type="text" id="adminBiasCode" autocomplete="off" placeholder="e.g. A042NEWBIAS">
-        </div>
-        <div>
-          <label for="adminBiasWeight">Weight (g/m)</label>
-          <input type="number" id="adminBiasWeight" step="0.01" min="0" placeholder="e.g. 3.50">
-        </div>
-        <div class="form-actions">
-          <button class="btn" type="submit">Save code</button>
-        </div>
-      </form>
-      <div class="error-note" id="adminBiasError" style="display:none"></div>
-      <div class="table-scroll">
-        <table class="table-compact" aria-describedby="adminIntro">
-          <thead>
-            <tr>
-              <th>Bias code</th>
-              <th class="right">Weight (g/m)</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="adminBindingList"></tbody>
-        </table>
-      </div>
+  <!-- Help popover (Popover API) -->
+  <div id="helpPop" popover>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px">
+      <strong data-i18n="help.title">Tips & Shortcuts</strong>
+      <button class="btn" popovertarget="helpPop" popovertargetaction="hide" data-i18n="help.close">Close</button>
     </div>
+    <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.4">
+      <li><kbd>t</kbd> <span data-i18n="help.t">toggle theme</span></li>
+      <li><kbd>c</kbd> <span data-i18n="help.c">copy current panel summary</span></li>
+      <li><kbd>?</kbd> <span data-i18n="help.q">open this help</span></li>
+      <li data-i18n="help.auto">Inputs auto-save and restore</li>
+    </ul>
   </div>
+  <!-- Copy confirmation popovers -->
+  <div id="duvetToast" popover data-i18n="toast.duvet">✅ Duvet summary copied</div>
+  <div id="pillowToast" popover data-i18n="toast.pillow">✅ Pillow summary copied</div>
 
-  <section class="section">
-    <h3>📦 Product</h3>
-    <div class="row">
-      <label for="productName">SKU <span class="chip">required</span></label>
-      <div>
-        <input type="text" id="productName" placeholder="e.g. Smartdown 10.5 Single" oninput="validateCanCalculate()">
-        <div class="inline-note" id="productNameNote">Enter a name to enable Calculate.</div>
+  <main class="container stack" style="padding-block: var(--space-lg);">
+    <!-- Duvet Panel -->
+    <section id="panel-duvet" role="tabpanel" aria-labelledby="tab-duvet">
+      <div class="toolbar" style="justify-content: space-between; margin-bottom: 10px;">
+        <div>
+          <h2 style="margin:0 0 6px; font-size: 18px;" data-i18n="duvet.h2">Duvet Calculator</h2>
+          <p class="muted" style="margin:0;" data-i18n="duvet.desc">Choose product type, tog, and size (pick or enter custom). Results update live.</p>
+        </div>
+        <div class="toolbar">
+          <button id="d-copyBtn" class="btn" title="Copy duvet summary" data-i18n-title="duvet.copy.title">📋 <span data-i18n="duvet.copy">Copy</span></button>
+        </div>
       </div>
-    </div>
-  </section>
+      <section class="panel-grid">
+        <!-- Controls -->
+        <div class="card fade-in" id="d-controls">
+          <h3 style="margin:0 0 10px; font-size: 16px; color: var(--muted); letter-spacing:.2px" data-i18n="duvet.inputs">Inputs</h3>
+          <div class="controls-grid">
+            <div class="span-6">
+              <label for="d-size" data-i18n="duvet.size">Finished size</label>
+              <select id="d-size"></select>
+            </div>
+            <div class="span-6" id="d-customDims" hidden>
+              <div class="field-grid">
+                <div>
+                  <label for="d-width" id="d-widthLabel" data-i18n="duvet.width">Width (cm)</label>
+                  <input id="d-width" type="number" min="1" step="1" value="135">
+                </div>
+                <div>
+                  <label for="d-length" id="d-lengthLabel" data-i18n="duvet.length">Length (cm)</label>
+                  <input id="d-length" type="number" min="1" step="1" value="200">
+                </div>
+              </div>
+            </div>
 
-  <section class="section">
-    <h3>🧵 Size & Fabrics</h3>
-    <div class="row">
-      <label for="duvetSize">Duvet Size</label>
-      <select id="duvetSize" onchange="onDuvetSizeChange();refreshDerivedDebounced();">
-        <option value="single">Single (135×200)</option>
-        <option value="double" selected>Double (200×200)</option>
-        <option value="king">King (230×220)</option>
-        <option value="superking">Super King (260×220)</option>
-        <option value="emperor">Emperor (290×235)</option>
-        <option value="custom">Custom</option>
-      </select>
-    </div>
-    <div id="customSizeFields" style="display:none">
-      <div class="row"><label for="customLength">Custom length <span class="inline-note">cm</span></label><input inputmode="decimal" type="number" id="customLength" value="200" min="1" step="1" oninput="refreshDerivedDebounced()"></div>
-      <div class="row"><label for="customWidth">Custom width <span class="inline-note">cm</span></label><input inputmode="decimal" type="number" id="customWidth" value="200" min="1" step="1" oninput="refreshDerivedDebounced()"></div>
-    </div>
-    <div class="divider"></div>
-    <div class="row">
-      <label for="numFabrics"># of Fabrics</label>
-      <select id="numFabrics" onchange="onNumFabricsChange();refreshDerivedDebounced();">
-        <option value="1" selected>1 Fabric (top &amp; bottom same)</option>
-        <option value="2">2 Fabrics (top Fabric 1, bottom Fabric 2)</option>
-      </select>
-    </div>
-  </section>
+            <div class="span-6">
+              <label for="d-product" data-i18n="duvet.product">Product type</label>
+              <select id="d-product"></select>
+            
 
-  <!-- Fabric 1 -->
-  <section class="section">
-    <h3>🧶 Fabric 1</h3>
-    <div class="row">
-      <label for="fabric1Type">Fabric type</label>
-      <div>
-        <select id="fabric1Type" onchange="onFabricTypeChange(1)"></select>
-        <div id="fabric1Help" class="error-note" style="display:none">Choose Fabric 1 type.</div>
-      </div>
-    </div>
-    <div class="row fabric1-detail" style="display:none"><label for="fabric1GSM">GSM <span class="inline-note">g/m²</span></label><input inputmode="decimal" type="number" id="fabric1GSM" value="0" min="0" step="1" oninput="refreshDerivedDebounced()"></div>
-    <div class="row fabric1-detail" style="display:none"><label>Common GSMs</label><div id="fabric1GSMChips" class="hint"></div></div>
-    <div class="row fabric1-detail" id="fabric1IsGRSRow" style="display:none"><label for="fabric1IsGRS">Is GRS?</label><input type="checkbox" id="fabric1IsGRS" onchange="refreshDerivedDebounced()"></div>
-  </section>
-
-  <!-- Fabric 2 -->
-  <section class="section" id="fabric2Section" style="display:none">
-    <h3>🧶 Fabric 2</h3>
-    <div class="row">
-      <label for="fabric2Type">Fabric type</label>
-      <div>
-        <select id="fabric2Type" onchange="onFabricTypeChange(2)"></select>
-        <div id="fabric2Help" class="error-note" style="display:none">Choose Fabric 2 type.</div>
-      </div>
-    </div>
-    <div class="row fabric2-detail" style="display:none"><label for="fabric2GSM">GSM <span class="inline-note">g/m²</span></label><input inputmode="decimal" type="number" id="fabric2GSM" value="0" min="0" step="1" oninput="refreshDerivedDebounced()"></div>
-    <div class="row fabric2-detail" style="display:none"><label>Common GSMs</label><div id="fabric2GSMChips" class="hint"></div></div>
-    <div class="row fabric2-detail" id="fabric2IsGRSRow" style="display:none"><label for="fabric2IsGRS">Is GRS?</label><input type="checkbox" id="fabric2IsGRS" onchange="refreshDerivedDebounced()"></div>
-  </section>
-
-  <section class="section">
-    <h3>☁️ Filling</h3>
-    <div class="row">
-      <label for="finishType">Finish</label>
-      <select id="finishType" onchange="onFinishChange();refreshDerivedDebounced()">
-        <option selected>Sonic Seam</option>
-        <option>Bound Duvets</option>
-        <option>Nursery without corovin</option>
-        <option>Nursery with corovin</option>
-      </select>
-    </div>
-    <div class="row">
-      <label for="togExcel">TOG</label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select id="togExcel" onchange="onTogChange();refreshDerivedDebounced()">
-          <option>4.5</option>
-          <option>7.5</option>
-          <option selected>10.5</option>
-          <option>13.5</option>
-          <option>15.0</option>
-          <option value="custom">Custom…</option>
-        </select>
-        <input id="togCustom" type="number" inputmode="decimal" step="0.1" min="1" style="width:120px;display:none" placeholder="e.g. 2.5" oninput="refreshDerivedDebounced()" />
-      </div>
-    </div>
-    <div class="row">
-      <label for="fibreRecipe">Fibre recipe</label>
-      <select id="fibreRecipe" onchange="refreshDerivedDebounced()"></select>
-    </div>
-    <div class="hint">Total kg = m²(one side) × TOG × constant × factor ÷ 1000. Split into grams by recipe %.</div>
-    <fieldset>
-      <legend>Computed filling lines</legend>
-      <div class="inline-note" id="constInfo" style="margin-bottom:.4rem"></div>
-      <table>
-        <thead><tr><th>#</th><th>Code</th><th class="right">%</th><th class="right">g</th></tr></thead>
-        <tbody id="tbodyComponents"><tr><td colspan="4" class="inline-note">Pick recipe to see lines.</td></tr></tbody>
-        <tfoot><tr><th colspan="3" class="right">Total grams</th><th class="right" id="fillTotalGrams">0</th></tr></tfoot>
-      </table>
-    </fieldset>
-  </section>
-
-  <section class="section">
-    <h3>🧯 Lining</h3>
-    <div class="row"><label for="includeLiner">Include?</label><input type="checkbox" id="includeLiner" onchange="toggleLiningDetailed()"></div>
-    <div id="linerDetailedFields" style="display:none">
-      <div class="row"><label for="linerGSM" id="linerGSMLabel">Liner GSM</label><input type="number" id="linerGSM" min="0" step="1" oninput="onLinerGSMInput()" placeholder="e.g. 15"><div id="linerGSMHelp" class="error-note" style="display:none">Enter lining GSM.</div></div>
-      <div class="row" id="linerSideRow" style="display:none">
-        <label for="linerCoverage">Liner coverage</label>
-        <select id="linerCoverage">
-          <option value="both" selected>Both sides</option>
-          <option value="one">One side</option>
-        </select>
-      </div>
-      <div class="row"><label for="linerIsGRS">Liner is GRS?</label><input type="checkbox" id="linerIsGRS" onchange="refreshDerivedDebounced()"></div>
-    </div>
-  </section>
-
-  <section class="section" id="bindingSection">
-    <h3>📏 Binding</h3>
-    <div class="row"><label for="includeBinding">Include?</label><input type="checkbox" id="includeBinding" onchange="toggleBindingDetailed()"></div>
-    <div id="bindingDetailedFields" style="display:none">
-      <div class="row"><label for="bindingCode">Binding code</label>
-        <select id="bindingCode" onchange="onBindingCodeChange()"></select></div>
-      <div class="row"><label>G/m <span class="inline-note">auto</span></label><div><span id="bindingGPMView">0</span> <span class="inline-note">g/m</span></div></div>
-      <div class="row" id="bindingIsGRSRow"><label for="bindingIsGRS" id="bindingIsGRSLabel">Is GRS?</label><input type="checkbox" id="bindingIsGRS"></div>
-      <div class="hint">Perimeter = 2 × ((L + W) / 100).</div>
-    </div>
-    <div class="inline-note">Rule: when binding is OFF, finish switches to <strong>Sonic Seam</strong>. When binding is ON, finish becomes <strong>Bound Duvets</strong>.</div>
-  </section>
-
-  <section class="section">
-    <div class="toolbar stickybar">
-      <button id="calcBtn" class="btn" onclick="calculateAll()" disabled>Calculate</button>
-    </div>
-    <div id="inlineErrors" class="error-note" style="display:none"></div>
-    <div id="certDecision" class="result" style="margin-top:10px" hidden></div>
-    <div id="results" class="result" aria-live="polite"></div>
-  </section>
-
-  <section class="section">
-    <h3 style="margin-top:0">🗃️ Archive</h3>
-    <div class="hint">Saved locally on your device.</div>
-    <details id="archiveCollapse">
-      <summary>Show archive</summary>
-      <table id="archiveTable">
-        <thead><tr><th>Date/Time</th><th>Product Name</th><th class="right">Total Wt (g)</th><th class="right">GRS Wt (g)</th><th class="right">GRS %</th><th>Tier</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </details>
-  </section>
 </div>
 
-<script>
-// --- Finish ⇄ Binding sync + hide on Sonic Seam ---
-function syncFinishAndBindingUI(){
-  const finishSel = document.getElementById('finishType');
-  const finish = (finishSel?.value || '').trim();
-  const bindingSection = document.getElementById('bindingSection');
-  const includeBinding = document.getElementById('includeBinding');
-  const bindingDetails = document.getElementById('bindingDetailedFields');
+            <div class="span-6">
+              <label for="d-togSelect" data-i18n="duvet.tog">Tog</label>
+              <select id="d-togSelect" title="Select tog value" data-i18n-title="duvet.tog.title">
+                <option value="1.5">1.5</option>
+                <option value="3.0">3.0</option>
+                <option value="4.0">4.0</option>
+                <option value="4.5">4.5</option>
+                <option value="7.5">7.5</option>
+                <option value="9.0">9.0</option>
+                <option value="10.5" selected>10.5</option>
+                <option value="13.5">13.5</option>
+                <option value="15.0">15.0</option>
+                <option value="custom" data-i18n="duvet.tog.custom">Custom…</option>
+              </select>
+            </div>
+            <div class="span-6" id="d-togCustomWrap" hidden>
+              <div class="field-grid">
+                <div>
+                  <label for="d-togCustom" data-i18n="duvet.togCustom">Enter custom tog</label>
+                  <input id="d-togCustom" type="number" min="0.5" max="30" step="0.5" value="10.5" placeholder="e.g. 11.0">
+                </div>
+              </div>
+            </div>
 
-  if (!bindingSection || !includeBinding || !bindingDetails) return;
+            <div class="span-6">
+              <label for="d-fibre" data-i18n="duvet.fibre">Fibre</label>
+              <select id="d-fibre"></select>
+            </div>
 
-  if (finish === 'Sonic Seam'){
-    // Hide Binding and force it off
-    bindingSection.style.display = 'none';
-    includeBinding.checked = false;
-    bindingDetails.style.display = 'none';
-  } else {
-    // Show Binding section for other finishes
-    bindingSection.style.display = '';
-    // Auto-on for Bound Duvets to follow the rule
-    if (finish === 'Bound Duvets'){
-      includeBinding.checked = true;
-      bindingDetails.style.display = '';
-    }
-  }
-}
+            <div class="span-12">
+              <span class="pill" id="d-codes" title="Fibre codes" data-i18n-attr-title="duvet.codes.title"></span>
+            </div>
+          </div>
+        </div>
 
-function onFinishChange(){
-  syncFinishAndBindingUI();
-  // Keep other derived values fresh
-  if (typeof refreshDerivedDebounced === 'function') refreshDerivedDebounced();
-  if (typeof validateCanCalculate === 'function') validateCanCalculate();
-}
+        <!-- KPIs -->
+        <div class="card fade-in" id="d-kpis" aria-live="polite">
+          <h3 style="margin:0 0 10px; font-size: 16px; color: var(--muted); letter-spacing:.2px" data-i18n="duvet.glance">At a glance</h3>
+          <div class="field-grid">
+            <div class="kpi"><div class="value" id="d-area">0.00</div><small data-i18n="duvet.area">m² area</small></div>
+            <div class="kpi"><div class="value" id="d-totalKg">0.00</div><small data-i18n="duvet.total">kg total fill</small></div>
+          </div>
+          <div class="kpis" style="margin-block-start:12px">
+            <div class="kpiBox"><small data-i18n="duvet.baseLenLbl">Base fabric length (incl. allowances)</small><strong id="d-usage_base_big">—</strong></div>
+            <div class="kpiBox" id="d-kpi_corovin" hidden><small data-i18n="duvet.corovinLenLbl">Corovin length</small><strong id="d-usage_corovin_big">—</strong></div>
+            <div class="kpiBox" id="d-kpi_binding" hidden><small data-i18n="duvet.bindingLenLbl">Binding length</small><strong id="d-usage_binding_big">—</strong></div>
+          </div>
+          <div class="kpis" style="margin-block-start:12px">
+            <div class="kpiBox"><small data-i18n="duvet.rollLbl">Recommended roll width to use</small><strong id="d-rollWidth">—</strong></div>
+          </div>
+        </div>
+      </section>
 
-function toggleBindingDetailed(){
-  const includeBinding = document.getElementById('includeBinding');
-  const bindingDetails = document.getElementById('bindingDetailedFields');
-  const finishSel = document.getElementById('finishType');
+      <section class="card fade-in">
+        <h3 style="margin:0 0 10px; font-size: 16px; color: var(--muted); letter-spacing:.2px" data-i18n="duvet.breakdown">Fibre breakdown</h3>
+        <div style="overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="duvet.tbl.component">Component</th>
+                <th data-i18n="duvet.tbl.code">Code</th>
+                <th class="num" data-i18n="duvet.tbl.pct">%</th>
+                <th class="num" data-i18n="duvet.tbl.kg">Weight (kg)</th>
+                <th class="num" data-i18n="duvet.tbl.g">Weight (g)</th>
+              </tr>
+            </thead>
+            <tbody id="d-breakdown"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
 
-  if (!includeBinding || !bindingDetails || !finishSel) return;
+    <!-- Pillow Panel -->
+    <section id="panel-pillow" role="tabpanel" aria-labelledby="tab-pillow" class="hidden">
+      <div class="toolbar" style="justify-content: space-between; margin-bottom: 10px;">
+        <div>
+          <h2 style="margin:0 0 6px; font-size: 18px;" data-i18n="pillow.h2">Pillow Fibre Calculator</h2>
+          <p class="muted" style="margin:0;" data-i18n="pillow.desc">Enter fill weight and fibre percentages. Results update live. Uses 1% allowance factor.</p>
+        </div>
+        <div class="toolbar">
+          <button id="p-copyBtn" class="btn" title="Copy pillow summary" data-i18n-title="pillow.copy.title">📋 <span data-i18n="pillow.copy">Copy</span></button>
+        </div>
+      </div>
 
-  const on = !!includeBinding.checked;
-  bindingDetails.style.display = on ? '' : 'none';
+      <section class="card">
+        <h3 style="margin:0 0 10px; font-size: 16px; color: var(--muted); letter-spacing:.2px" data-i18n="pillow.inputs">Inputs</h3>
+        <div class="controls-grid">
+          <div class="span-4">
+            <label for="p-fillWeight" data-i18n="pillow.fill">Fill weight (g)</label>
+            <input id="p-fillWeight" type="number" min="0" step="1" value="600">
+          </div>
+          <div class="span-4">
+            <label for="p-pct1" data-i18n="pillow.pct1">Insert fibre % — F1</label>
+            <input id="p-pct1" type="number" min="0" max="1000" step="1" value="90">
+          </div>
+          <div class="span-4">
+            <label for="p-pct2" data-i18n="pillow.pct2">Insert fibre % — F2</label>
+            <input id="p-pct2" type="number" min="0" max="1000" step="1" value="100">
+          </div>
+          <div class="span-4">
+            <label for="p-pct3" data-i18n="pillow.pct3">Insert fibre % — F3</label>
+            <input id="p-pct3" type="number" min="0" max="1000" step="1" value="30">
+          </div>
+          <div class="span-12">
+            <span class="pill" data-i18n="pillow.formula">Formula: (Fill × % × 1.01) ÷ 1000</span>
+          </div>
+        </div>
+      </section>
 
-  // Enforce the rule:
-  // - Binding ON  → Finish = Bound Duvets
-  // - Binding OFF → Finish = Sonic Seam
-  if (on && finishSel.value !== 'Bound Duvets') finishSel.value = 'Bound Duvets';
-  if (!on && finishSel.value !== 'Sonic Seam')   finishSel.value = 'Sonic Seam';
+      <section class="card">
+        <h3 style="margin:0 0 10px; font-size: 16px; color: var(--muted); letter-spacing:.2px" data-i18n="pillow.calc">Calculated weight</h3>
+        <div style="overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="pillow.tbl.fibre">Fibre</th>
+                <th class="num" data-i18n="pillow.tbl.pct">%</th>
+                <th class="num" data-i18n="pillow.tbl.kg">Weight (kg)</th>
+              </tr>
+            </thead>
+            <tbody id="p-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
 
-  syncFinishAndBindingUI();
-  if (typeof refreshDerivedDebounced === 'function') refreshDerivedDebounced();
-  if (typeof validateCanCalculate === 'function') validateCanCalculate();
-}
+  <script type="module">
+    // ===== i18n =====
+    const i18n = {
+      en: {
+        'app.title': 'Duvet & Pillow – Simple Calculators',
+        'hdr.title': '🧮 Duvet & Pillow Calculators',
+        'hdr.subtitle': 'Duvet (filling, fibre) and pillow (fibre) quick tools',
+        'tabs.duvet': 'Duvet',
+        'tabs.pillow': 'Pillow',
+        'a11y.lang': 'Language',
+        'btn.help': 'Help',
+        'btn.help.title': 'Help & shortcuts',
+        'btn.theme': 'Toggle theme',
+        'btn.theme.title': 'Toggle theme',
+        'help.title': 'Tips & Shortcuts',
+        'help.close': 'Close',
+        'help.t': 'toggle theme',
+        'help.c': 'copy current panel summary',
+        'help.q': 'open this help',
+        'help.auto': 'Inputs auto-save and restore',
+        'toast.duvet': '✅ Duvet summary copied',
+        'toast.pillow': '✅ Pillow summary copied',
 
-// Initialize this behavior on load (in addition to your inline onchange attributes)
-window.addEventListener('load', onFinishChange);
-</script>
+        'duvet.h2': 'Duvet Calculator',
+        'duvet.desc': 'Choose product type, tog, and size (pick or enter custom). Results update live.',
+        'duvet.copy': 'Copy',
+        'duvet.copy.title': 'Copy duvet summary',
+        'duvet.inputs': 'Inputs',
+        'duvet.size': 'Finished size',
+        'duvet.width': 'Width (cm)',
+        'duvet.length': 'Length (cm)',
+        'duvet.product': 'Product type',
+        'duvet.tog': 'Tog',
+        'duvet.tog.title': 'Select tog value',
+        'duvet.tog.custom': 'Custom…',
+        'duvet.togCustom': 'Enter custom tog',
+        'duvet.fibre': 'Fibre',
+        'duvet.codes.title': 'Fibre codes',
+        'duvet.glance': 'At a glance',
+        'duvet.area': 'm² area',
+        'duvet.total': 'kg total fill',
+        'duvet.baseLenLbl': 'Base fabric length (incl. allowances)',
+        'duvet.corovinLenLbl': 'Corovin length',
+        'duvet.rollLbl': 'Recommended roll width to use',
+        'duvet.breakdown': 'Fibre breakdown',
+        'duvet.tbl.component': 'Component',
+        'duvet.tbl.code': 'Code',
+        'duvet.tbl.pct': '%',
+        'duvet.tbl.kg': 'Weight (kg)',
+        'duvet.tbl.g': 'Weight (g)',
 
-<script>
-// --- Lining show/hide + sync (patched to actual IDs) ---
-function toggleLiningDetailed(){
-  const include = document.getElementById('includeLiner');
-  const details = document.getElementById('linerDetailedFields');
-  const sideRow = document.getElementById('linerSideRow');
-  const sideSel = document.getElementById('linerCoverage');
+        'pillow.h2': 'Pillow Fibre Calculator',
+        'pillow.desc': 'Enter fill weight and fibre percentages. Results update live. Uses 1% allowance factor.',
+        'pillow.copy': 'Copy',
+        'pillow.copy.title': 'Copy pillow summary',
+        'pillow.inputs': 'Inputs',
+        'pillow.fill': 'Fill weight (g)',
+        'pillow.pct1': 'Insert fibre % — F1',
+        'pillow.pct2': 'Insert fibre % — F2',
+        'pillow.pct3': 'Insert fibre % — F3',
+        'pillow.formula': 'Formula: (Fill × % × 1.01) ÷ 1000',
+        'pillow.calc': 'Calculated weight',
+        'pillow.tbl.fibre': 'Fibre',
+        'pillow.tbl.pct': '%',
+        'pillow.tbl.kg': 'Weight (kg)',
 
-  if (!include || !details) return;
+        // dynamic texts
+        'dyn.size.single': 'Single – 135×200',
+        'dyn.size.double': 'Double – 200×200',
+        'dyn.size.king': 'King – 225×220',
+        'dyn.size.super': 'Super King – 260×220',
+        'dyn.size.emperor': 'Emperor – 290×235',
+        'dyn.size.custom': 'Custom size…',
 
-  const on = !!include.checked;
-  details.style.display = on ? '' : 'none';
+        'dyn.product.group.ss': 'Sonic Seam',
+        'dyn.product.group.bd': 'Bound',
+        'dyn.product.group.nursery': 'Nursery',
+        'dyn.product.ss_with': 'Sonic Seam — with corovin',
+        'dyn.product.ss_without': 'Sonic Seam — without corovin',
+        'dyn.product.bd_with': 'Bound — with corovin',
+        'dyn.product.bd_without': 'Bound — without corovin',
+        'dyn.product.n_with': 'Nursery — with corovin',
+        'dyn.product.n_without': 'Nursery — without corovin',
+        'dyn.product.nb_with': 'Nursery — bound with corovin',
+        'dyn.product.nb_without': 'Nursery — bound without corovin',
 
-  // Show coverage dropdown only if 2 fabrics are used
-  const twoFabrics = (document.getElementById('numFabrics')?.value === '2');
-  if (sideRow) sideRow.style.display = (on && twoFabrics) ? '' : 'none';
-  if (sideSel) sideSel.disabled = !on;
+        'dyn.labels.runLength': 'Run Width (cm)',
+        'dyn.labels.runWidth': 'Run Length (cm)',
 
-  if (typeof refreshDerivedDebounced === 'function') refreshDerivedDebounced();
-  if (typeof validateCanCalculate === 'function') validateCanCalculate();
-}
+        'dyn.summary.duvet': 'Duvet',
+        'dyn.summary.product': 'Product',
+        'dyn.summary.tog': 'Tog',
+        'dyn.summary.fibre': 'Fibre',
+        'dyn.summary.area': 'Area',
+        'dyn.summary.total': 'Total fill',
+        'dyn.summary.base': 'Base fabric',
+        'dyn.summary.corovin': 'Corovin',
+        'dyn.summary.roll': 'Roll',
 
-function syncLiningWithFinish(){
-  const finishSel = document.getElementById('finishType');
-  const include = document.getElementById('includeLiner');
-  if (!finishSel || !include) return;
+        'dyn.summary.pillow.title': 'Pillow Fibre Calculator',
+        'dyn.summary.fill': 'Fill weight',
+        'dyn.summary.weights': 'Weights (kg)',
 
-  const f = (finishSel.value || '').toLowerCase();
-  if (f.includes('nursery') && f.includes('with') && f.includes('corovin')) {
-    include.checked = true;
-  }
-  if (f.includes('nursery') && f.includes('without') && f.includes('corovin')) {
-    include.checked = false;
-  }
-  toggleLiningDetailed();
-}
+        'duvet.binding': 'Include binding',
+        'duvet.binding.title': 'Add binding length',
+        'duvet.bindingLenLbl': 'Binding length',
+        'dyn.summary.binding': 'Binding'
+      },
+      et: {
+        'app.title': 'Teki- ja padjakalkulaatorid',
+        'hdr.title': '🧮 Teki- ja padjakalkulaatorid',
+        'hdr.subtitle': 'Kiired tööriistad teki (kangas, kiud) ja padja (kiud) arvutamiseks',
+        'tabs.duvet': 'Tekk',
+        'tabs.pillow': 'Padi',
+        'a11y.lang': 'Keel',
+        'btn.help': 'Abi',
+        'btn.help.title': 'Abi ja otseteed',
+        'btn.theme': 'Teema vahetus',
+        'btn.theme.title': 'Lülita teemat',
+        'help.title': 'Nipid ja otseteed',
+        'help.close': 'Sulge',
+        'help.t': 'lülita teemat',
+        'help.c': 'kopeeri aktiivse paneeli kokkuvõte',
+        'help.q': 'ava see abi',
+        'help.auto': 'Sisendid salvestuvad ja taastuvad automaatselt',
+        'toast.duvet': '✅ Teki kokkuvõte kopeeritud',
+        'toast.pillow': '✅ Padja kokkuvõte kopeeritud',
 
-// Preserve existing onFinishChange, then extend it
-const __origOnFinishChange = (typeof onFinishChange === 'function') ? onFinishChange : null;
-window.onFinishChange = function(){
-  if (__origOnFinishChange) __origOnFinishChange();
-  if (typeof syncFinishAndBindingUI === 'function') syncFinishAndBindingUI();
-  syncLiningWithFinish();
-};
+        'duvet.h2': 'Tekikalkulaator',
+        'duvet.desc': 'Vali toote tüüp, tog ja mõõt (vali eeldefineeritud või sisesta enda oma). Tulemused uuenevad kohe.',
+        'duvet.copy': 'Kopeeri',
+        'duvet.copy.title': 'Kopeeri teki kokkuvõte',
+        'duvet.inputs': 'Sisendid',
+        'duvet.size': 'Valmismõõt',
+        'duvet.width': 'Laius (cm)',
+        'duvet.length': 'Pikkus (cm)',
+        'duvet.product': 'Toote tüüp',
+        'duvet.tog': 'Tog',
+        'duvet.tog.title': 'Vali tog väärtus',
+        'duvet.tog.custom': 'Kohandatud…',
+        'duvet.togCustom': 'Sisesta tog',
+        'duvet.fibre': 'Kiud',
+        'duvet.codes.title': 'Kiudkoodid',
+        'duvet.glance': 'Kiirvaade',
+        'duvet.area': 'm² pindala',
+        'duvet.total': 'täite kogus (kg)',
+        'duvet.baseLenLbl': 'Põhikanga kulu (koos varudega)',
+        'duvet.corovinLenLbl': 'Corovini kulu',
+        'duvet.rollLbl': 'Soovituslik rullilaius',
+        'duvet.breakdown': 'Kiudude jaotus',
+        'duvet.tbl.component': 'Komponent',
+        'duvet.tbl.code': 'Kood',
+        'duvet.tbl.pct': '%',
+        'duvet.tbl.kg': 'Kaal (kg)',
+        'duvet.tbl.g': 'Kaal (g)',
 
-// Run on load and wire events
-window.addEventListener('load', () => {
-  // In case inline onchange exists
-  window.toggleLiningDetailed = toggleLiningDetailed;
+        'pillow.h2': 'Padja kiudude kalkulaator',
+        'pillow.desc': 'Sisesta täitekaal ja kiudude protsendid. Tulemused uuenevad kohe. Arvestab 1% varuga.',
+        'pillow.copy': 'Kopeeri',
+        'pillow.copy.title': 'Kopeeri padja kokkuvõte',
+        'pillow.inputs': 'Sisendid',
+        'pillow.fill': 'Täitekaal (g)',
+        'pillow.pct1': 'Kiudude % — F1',
+        'pillow.pct2': 'Kiudude % — F2',
+        'pillow.pct3': 'Kiudude % — F3',
+        'pillow.formula': 'Valem: (Täidis × % × 1,01) ÷ 1000',
+        'pillow.calc': 'Arvutatud mass',
+        'pillow.tbl.fibre': 'Kiud',
+        'pillow.tbl.pct': '%',
+        'pillow.tbl.kg': 'Kaal (kg)',
 
-  toggleLiningDetailed();
-  syncLiningWithFinish();
+        'dyn.size.single': 'Single – 135×200',
+        'dyn.size.double': 'Double – 200×200',
+        'dyn.size.king': 'King – 225×220',
+        'dyn.size.super': 'Super King – 260×220',
+        'dyn.size.emperor': 'Emperor – 290×235',
+        'dyn.size.custom': 'Kohandatud mõõt…',
 
-  // Re-evaluate when #numFabrics changes (affects coverage row visibility)
-  const nf = document.getElementById('numFabrics');
-  if (nf) nf.addEventListener('change', toggleLiningDetailed);
-});
-</script>
+        'dyn.product.group.ss': 'Sonic Seam',
+        'dyn.product.group.bd': 'Kant',
+        'dyn.product.group.nursery': 'Beebi',
+        'dyn.product.ss_with': 'Sonic Seam — coroviniga',
+        'dyn.product.ss_without': 'Sonic Seam — ilma corovinita',
+        'dyn.product.bd_with': 'Kant — coroviniga',
+        'dyn.product.bd_without': 'Kant — ilma corovinita',
+        'dyn.product.n_with': 'Beebi — coroviniga',
+        'dyn.product.n_without': 'Beebi — ilma corovinita',
+        'dyn.product.nb_with': 'Beebi (kant) — coroviniga',
+        'dyn.product.nb_without': 'Beebi (kant) — ilma corovinita',
 
+        'dyn.labels.runLength': 'Liini laius (cm)',
+        'dyn.labels.runWidth': 'Liini pikkus (cm)',
 
-<script>
-/* ===== Data sets (from user) ===== */
-const DEFAULT_BINDING_GPM = {
-  "A05MMSIMBAPIPING": 4.93,
-  "A042MMFPHBIAS": 3.25,
-  "A042MMPCBIAS": 4.55,
-  "A042MMTDAAGRSBIAS": 3.53,
-  "A042MMTDBGRSBIAS": 3.8,
-  "A042MM40CORBIAS": 1.91,
-  "A042MMNCGRYGRSBIAS": 3.8,
-  "A042MMMDWGRGRSBIAS": 3.63,
-  "A042MMPWHGRSBIAS": 3.7,
-  "A042MMSAVYSLGRSBIAS": 3.6,
-  "A042SIMBABIAS": 3.6,
-  "A042MMSIBLUEBIAS": 3.6,
-  "A042BLISSGRSBIAS": 3.55,
-  "A042MMCORBIAS": 0.6,
-  "A042MMNAVYBIAS": 4.4,
-  "A042MMMINTBIAS": 4.30,
-  "A042MMBLUEBIAS": 4.2,
-  "A042MMGRBIAS": 4.32,
-  "A042MMNWHBIAS": 4.37,
-  "A042MMBLUSHBIAS": 4.37,
-  "A042MMMORBIAS": 4.3,
-  "A042MMTURQBIAS": 3.7,
-  "A042MMPNKBIAS": 4.2
-};
-const BINDING_GPM = {};
-const bindingDefaultCodes = new Set(Object.keys(DEFAULT_BINDING_GPM));
-const BINDING_STORAGE_KEY = 'grs_binding_overrides_v1';
-let bindingOverrides = { custom:{}, removed:[] };
+        'dyn.summary.duvet': 'Tekk',
+        'dyn.summary.product': 'Toode',
+        'dyn.summary.tog': 'Tog',
+        'dyn.summary.fibre': 'Kiud',
+        'dyn.summary.area': 'Pindala',
+        'dyn.summary.total': 'Täite kogus',
+        'dyn.summary.base': 'Põhikangas',
+        'dyn.summary.corovin': 'Corovin',
+        'dyn.summary.roll': 'Rull',
 
-function resetBindingToDefaults(){
-  Object.keys(BINDING_GPM).forEach(code=>{ delete BINDING_GPM[code]; });
-  Object.entries(DEFAULT_BINDING_GPM).forEach(([code,val])=>{ BINDING_GPM[code] = val; });
-}
+        'dyn.summary.pillow.title': 'Padja kiudude kalkulaator',
+        'dyn.summary.fill': 'Täidise mass',
+        'dyn.summary.weights': 'Kaalud (kg)',
 
-function loadBindingOverrides(){
-  if (typeof localStorage === 'undefined') return;
-  try{
-    const raw = localStorage.getItem(BINDING_STORAGE_KEY);
-    if(!raw) return;
-    const parsed = JSON.parse(raw);
-    if(parsed && typeof parsed === 'object'){
-      const custom = {};
-      if(parsed.custom && typeof parsed.custom === 'object'){
-        Object.entries(parsed.custom).forEach(([code,val])=>{
-          if(typeof code === 'string'){
-            const num = Number(val);
-            if(Number.isFinite(num) && num > 0){
-              custom[code] = num;
-            }
-          }
-        });
+        'duvet.binding': 'Lisa kant',
+        'duvet.binding.title': 'Lisa kandi kulu',
+        'duvet.bindingLenLbl': 'Kandi pikkus',
+        'dyn.summary.binding': 'Kant'
       }
-      const removed = Array.isArray(parsed.removed) ? parsed.removed.filter(code=>typeof code === 'string' && code) : [];
-      bindingOverrides = {
-        custom,
-        removed: Array.from(new Set(removed))
-      };
-    }
-  } catch(e){
-    bindingOverrides = { custom:{}, removed:[] };
-  }
-}
-
-function saveBindingOverrides(){
-  if (typeof localStorage === 'undefined') return;
-  try{
-    const payload = {
-      custom: bindingOverrides.custom,
-      removed: bindingOverrides.removed
     };
-    localStorage.setItem(BINDING_STORAGE_KEY, JSON.stringify(payload));
-  } catch(e){}
+
+    function applyI18n(lang){
+      const dict = i18n[lang] || i18n.en;
+      document.documentElement.lang = lang;
+      // elements with text
+      document.querySelectorAll('[data-i18n]').forEach(el=>{
+        const key = el.getAttribute('data-i18n');
+        if(dict[key]) el.textContent = dict[key];
+      });
+      // title attributes
+      document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+        const key = el.getAttribute('data-i18n-title');
+        if(dict[key]) el.title = dict[key];
+      });
+      // other attributes
+      document.querySelectorAll('[data-i18n-attr-title]').forEach(el=>{
+        const key = el.getAttribute('data-i18n-attr-title');
+        if(dict[key]) el.setAttribute('title', dict[key]);
+      });
+      // <title>
+      const titleEl = document.querySelector('title[data-i18n="app.title"]');
+      if(titleEl) titleEl.textContent = dict['app.title'] || titleEl.textContent;
+    }
+
+    // ===== Global Tab & Theme =====
+    const tabDuvet = document.getElementById('tab-duvet');
+    const tabPillow = document.getElementById('tab-pillow');
+    const panelDuvet = document.getElementById('panel-duvet');
+    const panelPillow = document.getElementById('panel-pillow');
+
+    function selectTab(which){
+      const isDuvet = which === 'duvet';
+      tabDuvet.setAttribute('aria-selected', String(isDuvet));
+      tabPillow.setAttribute('aria-selected', String(!isDuvet));
+      panelDuvet.classList.toggle('hidden', !isDuvet);
+      panelPillow.classList.toggle('hidden', isDuvet);
+      localStorage.setItem('calc-tab', which);
+    }
+    tabDuvet.addEventListener('click', ()=>selectTab('duvet'));
+    tabPillow.addEventListener('click', ()=>selectTab('pillow'));
+    selectTab(localStorage.getItem('calc-tab') || 'duvet');
+
+    const themeBtn = document.getElementById('themeBtnGlobal');
+    const setTheme = (mode) => {
+      const apply = () => document.documentElement.setAttribute('data-theme', mode);
+      if (document.startViewTransition) { document.startViewTransition(apply); } else { apply(); }
+      themeBtn.setAttribute('aria-pressed', String(mode === 'dark'));
+      localStorage.setItem('calc-theme', mode);
+    };
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'auto';
+      const next = current === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    });
+    const savedTheme = localStorage.getItem('calc-theme');
+    if (savedTheme) setTheme(savedTheme);
+
+    // ===== Duvet Calculator (scoped IDs with d- prefix) =====
+    const d$ = (id) => document.getElementById('d-' + id);
+
+    const FIBRES = [
+      { name:"Smartfil Eco", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS",null], prc:[0.65,0.35,0], consts:{lte7_5:28, c9_10_5:31, c13_5:36, c15:36, nurseryNo:28, nurseryYes:25} },
+      { name:"Smartfil Silk Touch", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6SILK9767"], prc:[0.65,0.30,0.05], consts:{lte7_5:28, c9_10_5:31, c13_5:36, c15:36, nurseryNo:28, nurseryYes:25} },
+      { name:"Smartfil Silk Touch 10%", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6SILK9767"], prc:[0.60,0.30,0.10], consts:{lte7_5:30, c9_10_5:31, c13_5:35, c15:35} },
+      { name:"Smartfil Tech - Aegis", codes:["A6FIBRENO4I",null,null], prc:[1,0,0], consts:{lte7_5:28, c9_10_5:30, c13_5:34, c15:34} },
+      { name:"Smartfil Tech - Amicor", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6AM3"], prc:[0.60,0.20,0.20], consts:{lte7_5:28, c9_10_5:30, c13_5:32, c15:32, nurseryNo:28} },
+      { name:"Smartfil Tech - Breathe 20%", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6MOD1"], prc:[0.60,0.20,0.20], consts:{lte7_5:30, c9_10_5:34, c13_5:34, c15:34, nurseryNo:32} },
+      { name:"Smartfil Tech - Breathe 10%", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6MOD1"], prc:[0.60,0.30,0.10], consts:{lte7_5:30, c9_10_5:34, c13_5:34, c15:34, nurseryNo:32} },
+      { name:"Primaloft", codes:["A6FIBRENO4YPRIGRS",null,null], prc:[1,0,0], consts:{lte7_5:28, c9_10_5:36, c13_5:36} },
+      { name:"Smartfil Tech - Breathe 5%", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6MOD1"], prc:[0.65,0.30,0.05], consts:{lte7_5:28, c9_10_5:36, c13_5:36, c15:36, nurseryNo:28, nurseryYes:25} },
+      { name:"Smartfil Tech - Clima", codes:["A6FIBRENO4YGRS","A6FIBRENO2CGRS","A6LYOPCM"], prc:[0.60,0.20,0.20], consts:{lte7_5:28, c9_10_5:28, c13_5:28, c15:28} },
+    ];
+
+    const fibreSel = d$('fibre');
+    FIBRES.forEach((f, i) => {
+      const ints = (f.prc || []).map(p => Math.round(p * 100)).filter(n => n > 0);
+      const pct = ints.length ? ` (${ints.join('/')})` : '';
+      fibreSel.add(new Option(f.name + pct, String(i)));
+    });
+
+    let currentLang = localStorage.getItem('calc-lang') || (navigator.language || 'en').slice(0,2);
+    if(!['en','et'].includes(currentLang)) currentLang = 'en';
+    const langBtn = document.getElementById('langBtn');
+    const langBtnText = document.getElementById('langBtnText');
+    function updateLangButton(){ langBtnText.textContent = (currentLang || 'en').toUpperCase(); }
+    updateLangButton();
+    applyI18n(currentLang);
+
+    let nf2 = new Intl.NumberFormat(currentLang, { maximumFractionDigits: 2 });
+
+    const FINISH_RULES = {
+      'SONIC SEAM':   {extra:5, factor:1.028,  halve:false},
+      'BOUND DUVETS': {extra:5, factor:1.0478, halve:false},
+      'NURSERY':      {extra:5, factor:1.06,   halve:true}
+    };
+
+    function d_fmt(n, dp=2){ return Number.isFinite(n) ? n.toFixed(dp) : '—'; }
+
+    function d_sizeArea(size, w, l){
+      switch(size){
+        case 'SINGLE': return (135*200)/10000;
+        case 'DOUBLE': return (200*200)/10000;
+        case 'KING': return (220*225)/10000;
+        case 'SUPER KING': return (220*260)/10000;
+        case 'EMPEROR': return (290*235)/10000;
+        case 'CUSTOM SIZE': return (w*l)/10000;
+        default: return 0;
+      }
+    }
+
+    function d_pickConstant(fibre, mode, tog){
+      const c = fibre.consts || {};
+      if(mode==='nurseryNo')  return (c.nurseryNo ?? c.nurseryYes ?? null);
+      if(mode==='nurseryYes') return (c.nurseryYes ?? c.nurseryNo ?? null);
+      if(tog <= 7.5)          return c.lte7_5 ?? null;
+      if(tog === 9 || tog === 10.5) return c.c9_10_5 ?? null;
+      if(tog === 13.5)        return c.c13_5 ?? null;
+      if(tog === 15)          return c.c15 ?? null;
+      return null;
+    }
+
+    function d_chooseRoll(lengthCm, widthCm, sizeVal){
+  // Choose the roll based on the finished LENGTH (next available roll size),
+  // with a business exception: Emperor (290×235) uses the 260 cm roll.
+  // Standard rules:
+  // - <= 200 cm length -> 220 cm roll
+  // - 201–240 cm length -> 240 cm roll
+  // - > 240 cm length -> 260 cm roll
+  if (!Number.isFinite(lengthCm)) return null;
+
+  // Explicit exception for Emperor preset
+  const isEmperor = (String(sizeVal||'').toUpperCase() === 'EMPEROR') || (Number(widthCm) >= 290 && Number(lengthCm) === 235);
+  if (isEmperor) return 260;
+
+  if (lengthCm <= 200) return 220;
+  if (lengthCm <= 240) return 240;
+  return 260;
 }
 
-function applyBindingOverrides(){
-  resetBindingToDefaults();
-  let mutated = false;
-  (bindingOverrides.removed || []).forEach(code=>{
-    if(typeof code === 'string' && code){
-      delete BINDING_GPM[code];
+
+    const PRODUCT_PRESETS = {
+  ss_with:    { mode:'standard',   construction:'Sonic Seam', finish:'SONIC SEAM',   corovin:true,  bound:false },
+  ss_without: { mode:'standard',   construction:'Sonic Seam', finish:'SONIC SEAM',   corovin:false, bound:false },
+  bd_with:    { mode:'standard',   construction:'Stitched',   finish:'BOUND DUVETS', corovin:true,  bound:true  },
+  bd_without: { mode:'standard',   construction:'Stitched',   finish:'BOUND DUVETS', corovin:false, bound:true  },
+  n_with:     { mode:'nurseryYes', construction:'Sonic Seam', finish:'NURSERY',      corovin:true,  bound:false },
+  n_without:  { mode:'nurseryNo',  construction:'Sonic Seam', finish:'NURSERY',      corovin:false, bound:false },
+  nb_with:    { mode:'nurseryYes', construction:'Stitched',   finish:'NURSERY',      corovin:true,  bound:true  },
+  nb_without: { mode:'nurseryNo',  construction:'Stitched',   finish:'NURSERY',      corovin:false, bound:true  }
+};
+
+    function d_currentState(){
+      const size = d$('size').value;
+      const width = parseFloat(d$('width').value || 0);
+      const length = parseFloat(d$('length').value || 0);
+      const productKey = d$('product').value;
+      const preset = PRODUCT_PRESETS[productKey];
+      const togChoice = d$('togSelect').value;
+      const tog = (togChoice === 'custom') ? parseFloat(d$('togCustom').value || '0') : parseFloat(togChoice);
+      const fibre = FIBRES[parseInt(d$('fibre').value || 0)];
+      const includeBinding = !!(preset && preset.bound);
+      return { mode: preset?.mode, construction: preset?.construction, finish: preset?.finish, corovin: preset?.corovin,  size, width, length, productKey, preset, tog, fibre, includeBinding };
     }
-  });
-  Object.entries(bindingOverrides.custom || {}).forEach(([code,val])=>{
-    if(typeof code === 'string'){
-      const num = Number(val);
-      if(Number.isFinite(num) && num > 0){
-        if(bindingDefaultCodes.has(code) && DEFAULT_BINDING_GPM[code] === num){
-          delete bindingOverrides.custom[code];
-          mutated = true;
+
+    function d_isCustomSizeValue(v){ return (v ?? '').toString().trim().toUpperCase().includes('CUSTOM'); }
+
+    function buildSizeOptions(){
+      const dict = i18n[currentLang] || i18n.en;
+      const sizeSel = d$('size');
+      sizeSel.innerHTML = '';
+      const opts = [
+        { value:'SINGLE', w:135, l:200, label: dict['dyn.size.single'] },
+        { value:'DOUBLE', w:200, l:200, label: dict['dyn.size.double'] },
+        { value:'KING', w:225, l:220, label: dict['dyn.size.king'] },
+        { value:'SUPER KING', w:260, l:220, label: dict['dyn.size.super'] },
+        { value:'EMPEROR', w:290, l:235, label: dict['dyn.size.emperor'] },
+        { value:'CUSTOM SIZE', label: dict['dyn.size.custom'] }
+      ];
+      for(const o of opts){
+        const opt = new Option(o.label, o.value);
+        if(o.w) opt.dataset.w = String(o.w);
+        if(o.l) opt.dataset.l = String(o.l);
+        sizeSel.add(opt);
+      }
+    }
+
+    function buildProductOptions(){
+      const dict = i18n[currentLang] || i18n.en;
+      const sel = d$('product');
+      sel.innerHTML = '';
+      const groups = [
+  { label: dict['dyn.product.group.ss'], options:[
+    {val:'ss_with',    label: dict['dyn.product.ss_with']},
+    {val:'ss_without', label: dict['dyn.product.ss_without']}
+  ]},
+  { label: dict['dyn.product.group.bd'], options:[
+    {val:'bd_with',    label: dict['dyn.product.bd_with']},
+    {val:'bd_without', label: dict['dyn.product.bd_without']}
+  ]},
+  { label: dict['dyn.product.group.nursery'], options:[
+    {val:'n_with',     label: dict['dyn.product.n_with']},
+    {val:'n_without',  label: dict['dyn.product.n_without']},
+    {val:'nb_with',    label: dict['dyn.product.nb_with']},
+    {val:'nb_without', label: dict['dyn.product.nb_without']}
+  ]}
+];
+      for(const g of groups){
+        const og = document.createElement('optgroup');
+        og.label = g.label;
+        for(const o of g.options){
+          const opt = new Option(o.label, o.val);
+          og.appendChild(opt);
+        }
+        sel.appendChild(og);
+      }
+      // default selection
+      sel.value = sel.value || 'ss_without';
+    }
+
+    function d_render(){
+      // dynamic labels for custom size
+      const dict = i18n[currentLang] || i18n.en;
+      const isCustomTog = d$('togSelect').value && d$('togSelect').value.toString().toLowerCase().includes('custom');
+      d$('togCustomWrap').hidden = !isCustomTog;
+
+      const st = d_currentState();
+      const isCustom = d_isCustomSizeValue(st.size);
+
+      const labelWidthEl = document.getElementById('d-widthLabel');
+      const labelLengthEl = document.getElementById('d-lengthLabel');
+      if (labelWidthEl && labelLengthEl) {
+        labelWidthEl.textContent = isCustom ? dict['dyn.labels.runLength'] : (dict['duvet.width'] || 'Width (cm)');
+        labelLengthEl.textContent = isCustom ? dict['dyn.labels.runWidth'] : (dict['duvet.length'] || 'Length (cm)');
+      }
+
+      const customDims = d$('customDims');
+      customDims.hidden = !d_isCustomSizeValue(st.size);
+
+      const selectedOpt = d$('size').selectedOptions[0];
+      if(!d_isCustomSizeValue(st.size) && selectedOpt?.dataset.w && selectedOpt?.dataset.l){
+        d$('width').value = selectedOpt.dataset.w;
+        d$('length').value = selectedOpt.dataset.l;
+        st.width = parseFloat(selectedOpt.dataset.w);
+        st.length = parseFloat(selectedOpt.dataset.l);
+      }
+
+      if (isCustom) {
+        // In custom mode, the WIDTH input is labeled 'Run Length' and the LENGTH input is labeled 'Run Width'.
+        // So map them accordingly:
+        const runLength = parseFloat((d$('width').value || '0'));  // run length (finished LENGTH)
+        const runWidth  = parseFloat((d$('length').value || '0')); // run width  (cut WIDTH)
+        st.length = runLength;
+        st.width  = runWidth;
+      }
+
+      const area = d_sizeArea(st.size, st.width, st.length);
+      d$('area').textContent = d_fmt(area, 2);
+
+      const constant = d_pickConstant(st.fibre, st.mode, st.tog);
+      let totalKg = 0;
+      if(constant != null && area>0){
+        const factor = (st.construction === 'Sonic Seam') ? 1.028 : 1.0478;
+        totalKg = Math.round(((area * st.tog * constant * factor)/1000) * 100) / 100;
+      }
+      d$('totalKg').textContent = d_fmt(totalKg, 2);
+
+      d$('codes').textContent = `F1: ${st.fibre.codes[0]||'–'}  •  F2: ${st.fibre.codes[1]||'–'}  •  F3: ${st.fibre.codes[2]||'–'}`;
+
+const kpiBinding = document.getElementById('d-kpi_binding');if (st.includeBinding && (st.width>0) && (st.length>0)) {const bindingLenM = ((st.length + st.width) * 2 * 1.08) / 100;
+  document.getElementById('d-usage_binding_big').textContent = nf2.format(bindingLenM) + ' m';
+  if(kpiBinding) kpiBinding.hidden = false;
+} else {
+  if(kpiBinding) kpiBinding.hidden = true;
+}
+
+      const rows = [];
+      const labels = ['Fibre 1','Fibre 2','Fibre 3'];
+      for(let i=0;i<3;i++){
+        const pr = st.fibre.prc[i] || 0;
+        const code = st.fibre.codes[i] || '—';
+        let kg;
+        if(i<2){ kg = Math.round((pr * totalKg) * 1000) / 1000; } else { kg = pr * totalKg; }
+        const g = Math.round(kg * 1000);
+        rows.push(`<tr><td>${labels[i]}</td><td>${code}</td><td class="num">${(pr*100).toFixed(1)}%</td><td class="num">${kg.toFixed(3)}</td><td class="num">${g}</td></tr>`);
+      }
+      d$('breakdown').innerHTML = rows.join('');
+
+      const roll = d_chooseRoll(st.length, st.width, st.size);
+      d$('rollWidth').textContent = Number.isFinite(roll) ? (roll + ' cm') : '—';
+
+      if(!(st.width>0) || !(st.length>0) || !Number.isFinite(roll)){
+        d$('usage_base_big').textContent = '—';
+        d$('usage_corovin_big').textContent = '—';
+        d$('kpi_corovin').hidden = true;
+      } else {
+        const rule = FINISH_RULES[st.finish];
+        function adjustedRunCm(runCm){
+          let adj = (runCm + rule.extra) * 2;
+          adj = adj * rule.factor;
+          if (rule.halve) adj = adj / 2;
+          return adj;
+        }
+        const panels = Math.max(1, Math.ceil(st.length / roll));
+        let baseUsageM = panels * (adjustedRunCm(st.width) / 100);
+        d$('usage_base_big').textContent = nf2.format(baseUsageM) + ' m';
+
+        let corovinPercent = 0;
+        if (st.corovin) {
+          if (roll === 260) corovinPercent = 0.06;
+          else if (roll === 220 || roll === 240) corovinPercent = 0.04;
+        }
+        if (corovinPercent > 0) {
+          const corovinFinal = baseUsageM * (1 + corovinPercent);
+          d$('usage_corovin_big').textContent = nf2.format(corovinFinal) + ' m';
+          d$('kpi_corovin').hidden = false;
         } else {
-          BINDING_GPM[code] = num;
+          d$('kpi_corovin').hidden = true;
         }
       }
+
+      // Store a convenient summary for copy
+      const dct = i18n[currentLang] || i18n.en;
+      const _bindLine = (st.includeBinding && document.getElementById('d-usage_binding_big').textContent) ? ` | ${dct['dyn.summary.binding']}: ${document.getElementById('d-usage_binding_big').textContent}` : '';
+      window._duvetSummary = `${dct['dyn.summary.duvet']}: ${d$('size').selectedOptions[0]?.textContent} ${d$('width').value}×${d$('length').value}cm\n${dct['dyn.summary.product']}: ${d$('product').selectedOptions[0]?.textContent}\n${dct['dyn.summary.tog']}: ${st.tog}\n${dct['dyn.summary.fibre']}: ${d$('fibre').selectedOptions[0]?.textContent}\n${dct['dyn.summary.area']}: ${d$('area').textContent} m² | ${dct['dyn.summary.total']}: ${d$('totalKg').textContent} kg\n${dct['dyn.summary.base']}: ${d$('usage_base_big').textContent} | ${dct['dyn.summary.corovin']}: ${d$('usage_corovin_big').textContent || '—'} | ${dct['dyn.summary.roll']}: ${d$('rollWidth').textContent}${_bindLine}`;
     }
-  });
-  if(mutated){ saveBindingOverrides(); }
-}
 
-resetBindingToDefaults();
-loadBindingOverrides();
-applyBindingOverrides();
-const FABRIC_GSM = {
-  "Cotton/Tencel": { mode_gsm:110, common_gsms:[110] },
-  "Cotton":        { mode_gsm:133, common_gsms:[100,115,133,230] },
-  "Poly/Cotton":   { mode_gsm:116, common_gsms:[98,111,116,158] },
-  "Modal/Cotton":  { mode_gsm:115, common_gsms:[109,115] },
-  "Polyester":     { mode_gsm:85,  common_gsms:[80,85,87,90] }
-};
-const FIBRE_TABLE = [
-  {"fibre_name":"Smartfil Eco","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.65,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.35,"isGRS":true}],"constants":{"leq7_5":28.0,"tog9_10_5":31.0,"tog13_5":36.0,"tog15_0":36.0,"nursery_no_corovin":28.0,"nursery_corovin":25.0}},
-  {"fibre_name":"Smartfil Silk Touch","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.65,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.30,"isGRS":true},{"code":"A6SILK9767","prcnt":0.05,"isGRS":false}],"constants":{"leq7_5":28.0,"tog9_10_5":31.0,"tog13_5":36.0,"tog15_0":36.0,"nursery_no_corovin":28.0,"nursery_corovin":25.0}},
-  {"fibre_name":"Smartfil Silk Touch 10","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.6,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.3,"isGRS":true},{"code":"A6SILK9767","prcnt":0.1,"isGRS":false}],"constants":{"leq7_5":30.0,"tog9_10_5":31.0,"tog13_5":35.0,"tog15_0":35.0,"nursery_no_corovin":null,"nursery_corovin":null}},
-  {"fibre_name":"Smartfil Tech - Aegis (100%)","components":[{"code":"A6FIBRENO4I","prcnt":1.0,"isGRS":false}],"constants":{"leq7_5":28.0,"tog9_10_5":30.0,"tog13_5":34.0,"tog15_0":34.0,"nursery_no_corovin":null,"nursery_corovin":null}},
-  {"fibre_name":"Smartfil Tech - Amicor","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.6,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.2,"isGRS":true},{"code":"A6AM3","prcnt":0.2,"isGRS":false}],"constants":{"leq7_5":28.0,"tog9_10_5":30.0,"tog13_5":32.0,"tog15_0":32.0,"nursery_no_corovin":28.0,"nursery_corovin":25.0}},
-  {"fibre_name":"Smartfil Tech - Breathe (20%)","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.6,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.2,"isGRS":true},{"code":"A6MODLECO","prcnt":0.2,"isGRS":false}],"constants":{"leq7_5":30.0,"tog9_10_5":34.0,"tog13_5":34.0,"tog15_0":34.0,"nursery_no_corovin":32.0,"nursery_corovin":null}},
-  {"fibre_name":"Smartfil Tech - Breathe 10","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.6,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.3,"isGRS":true},{"code":"A6MODLECO","prcnt":0.1,"isGRS":false}],"constants":{"leq7_5":30.0,"tog9_10_5":34.0,"tog13_5":34.0,"tog15_0":34.0,"nursery_no_corovin":32.0,"nursery_corovin":null}},
-  {"fibre_name":"Primaloft","components":[{"code":"A6FIBRENO4YPRIGRS","prcnt":1.0,"isGRS":true}],"constants":{"leq7_5":28.0,"tog9_10_5":36.0,"tog13_5":36.0,"tog15_0":36.0,"nursery_no_corovin":null,"nursery_corovin":null}},
-  {"fibre_name":"Smartfil Tech - Breathe 5","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.65,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.3,"isGRS":true},{"code":"A6MODLECO","prcnt":0.05,"isGRS":false}],"constants":{"leq7_5":28.0,"tog9_10_5":36.0,"tog13_5":36.0,"tog15_0":36.0,"nursery_no_corovin":28.0,"nursery_corovin":25.0}},
-  {"fibre_name":"Smartfil Tech - Clima","components":[{"code":"A6FIBRENO4YGRS","prcnt":0.6,"isGRS":true},{"code":"A6FIBRENO2CGRS","prcnt":0.2,"isGRS":true},{"code":"A6LYOPCM","prcnt":0.2,"isGRS":false}],"constants":{"leq7_5":28.0,"tog9_10_5":28.0,"tog13_5":28.0,"tog15_0":28.0,"nursery_no_corovin":28.0,"nursery_corovin":null}}
-];
-
-/* ===== UI helpers ===== */
-function populateBindingCodes(){
-  const sel=document.getElementById('bindingCode'); if(!sel) return;
-  const prev=sel.value;
-  sel.innerHTML='<option value="">Select binding</option>';
-  Object.keys(BINDING_GPM).sort((a,b)=>a.localeCompare(b)).forEach(code=>{
-    const o=document.createElement('option'); o.value=code; o.textContent=code; sel.appendChild(o);
-  });
-  const restored = (prev && Object.prototype.hasOwnProperty.call(BINDING_GPM, prev)) ? prev : '';
-  if(restored){ sel.value = restored; }
-  else { sel.value=''; }
-  if(restored !== prev){
-    if(typeof onBindingCodeChange === 'function'){ onBindingCodeChange(); }
-  }
-}
-function validateBindingSelect(){
-  const include = document.getElementById('includeBinding').checked;
-  const sel = document.getElementById('bindingCode');
-  if(!sel) return;
-  if(include && !sel.value){ sel.classList.add('danger'); }
-  else { sel.classList.remove('danger'); }
-}
-function onBindingCodeChange(){
-  const code=(document.getElementById('bindingCode')||{}).value||'';
-  const gpm=BINDING_GPM[code]||0;
-  document.getElementById('bindingGPMView').textContent=gpm.toString();
-
-  const chk=document.getElementById('bindingIsGRS');
-  const lbl=document.getElementById('bindingIsGRSLabel');
-  const row=document.getElementById('bindingIsGRSRow');
-  const hasGRS = window.isGRSBindingCode(code);
-
-  if (hasGRS){
-    if (chk){ chk.checked = true; chk.disabled = true; }
-    if (lbl){ lbl.classList.add('label-muted'); }
-    if (row){ row.style.display = ''; }
-  } else {
-    if (row){ row.style.display = 'none'; }
-    if (chk){ chk.checked = false; chk.disabled = false; }
-    if (lbl){ lbl.classList.remove('label-muted'); }
-  }
-  validateBindingSelect();
-}
-
-function formatBindingWeight(value){
-  const num = Number(value);
-  if(!Number.isFinite(num)) return '0';
-  return num.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
-}
-
-function escapeHtml(value){
-  return String(value)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
-
-function setAdminError(message){
-  const el = document.getElementById('adminBiasError');
-  if(!el) return;
-  if(message){
-    el.textContent = message;
-    el.style.display = 'block';
-  } else {
-    el.textContent = '';
-    el.style.display = 'none';
-  }
-}
-
-function renderBindingAdminTable(){
-  const tbody = document.getElementById('adminBindingList');
-  if(!tbody) return;
-  const codes = Object.keys(BINDING_GPM).sort((a,b)=>a.localeCompare(b));
-  if(!codes.length){
-    tbody.innerHTML = '<tr><td colspan="4" class="inline-note">No bias codes configured.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = codes.map(code=>{
-    const safeCode = escapeHtml(code);
-    const weightText = formatBindingWeight(BINDING_GPM[code]);
-    const isDefault = bindingDefaultCodes.has(code);
-    const hasOverride = isDefault && Object.prototype.hasOwnProperty.call(bindingOverrides.custom || {}, code);
-    const statusLabel = isDefault ? (hasOverride ? 'Default (overridden)' : 'Default') : 'Custom';
-    const status = `<span class="badge-muted">${statusLabel}</span>`;
-    return `<tr><td>${safeCode}</td><td class="right">${escapeHtml(weightText)}</td><td>${status}</td><td class="right"><button type="button" class="link-btn" onclick="removeBiasCode(${JSON.stringify(code)})">Remove</button></td></tr>`;
-  }).join('');
-}
-
-function openAdminPanel(){
-  closeMenu('adminMenu');
-  renderBindingAdminTable();
-  const overlay = document.getElementById('adminOverlay');
-  if(overlay){
-    overlay.classList.add('open');
-    document.body.classList.add('modal-open');
-    setAdminError('');
-    window.setTimeout(()=>{
-      const codeInput = document.getElementById('adminBiasCode');
-      if(codeInput){ codeInput.focus(); }
-    }, 50);
-  }
-}
-
-function closeAdminPanel(){
-  const overlay = document.getElementById('adminOverlay');
-  if(overlay){
-    overlay.classList.remove('open');
-    document.body.classList.remove('modal-open');
-  }
-  setAdminError('');
-  const form = document.getElementById('adminBiasForm');
-  if(form && typeof form.reset === 'function'){ form.reset(); }
-}
-
-function addBiasCode(ev){
-  if(ev && typeof ev.preventDefault === 'function'){ ev.preventDefault(); }
-  const codeInput = document.getElementById('adminBiasCode');
-  const weightInput = document.getElementById('adminBiasWeight');
-  if(!codeInput || !weightInput) return false;
-  const rawCode = (codeInput.value || '').trim();
-  const weight = Number(weightInput.value);
-  if(!rawCode){
-    setAdminError('Enter a bias code.');
-    return false;
-  }
-  if(!Number.isFinite(weight) || weight <= 0){
-    setAdminError('Enter a weight greater than 0.');
-    return false;
-  }
-  const code = rawCode.toUpperCase();
-  BINDING_GPM[code] = weight;
-  if(!bindingOverrides || typeof bindingOverrides !== 'object'){ bindingOverrides = { custom:{}, removed:[] }; }
-  if(!bindingOverrides.custom || typeof bindingOverrides.custom !== 'object'){ bindingOverrides.custom = {}; }
-  if(bindingDefaultCodes.has(code) && DEFAULT_BINDING_GPM[code] === weight){
-    delete bindingOverrides.custom[code];
-  } else {
-    bindingOverrides.custom[code] = weight;
-  }
-  bindingOverrides.removed = Array.isArray(bindingOverrides.removed) ? bindingOverrides.removed.filter(c=>c !== code) : [];
-  saveBindingOverrides();
-  populateBindingCodes();
-  renderBindingAdminTable();
-  const select = document.getElementById('bindingCode');
-  if(select && select.value === code && typeof onBindingCodeChange === 'function'){ onBindingCodeChange(); }
-  setAdminError('');
-  codeInput.value = '';
-  weightInput.value = '';
-  codeInput.focus();
-  return false;
-}
-
-function removeBiasCode(code){
-  if(!code) return;
-  if(!window.confirm(`Remove bias code "${code}"?`)) return;
-  if(Object.prototype.hasOwnProperty.call(BINDING_GPM, code)){
-    delete BINDING_GPM[code];
-  }
-  if(!bindingOverrides || typeof bindingOverrides !== 'object'){ bindingOverrides = { custom:{}, removed:[] }; }
-  if(bindingOverrides.custom && Object.prototype.hasOwnProperty.call(bindingOverrides.custom, code)){
-    delete bindingOverrides.custom[code];
-  }
-  if(!Array.isArray(bindingOverrides.removed)) bindingOverrides.removed = [];
-  if(bindingDefaultCodes.has(code)){
-    if(!bindingOverrides.removed.includes(code)){
-      bindingOverrides.removed.push(code);
-    }
-  } else {
-    bindingOverrides.removed = bindingOverrides.removed.filter(c=>c !== code);
-  }
-  saveBindingOverrides();
-  populateBindingCodes();
-  renderBindingAdminTable();
-  const select = document.getElementById('bindingCode');
-  if(select && select.value === code){
-    select.value='';
-    if(typeof onBindingCodeChange === 'function'){ onBindingCodeChange(); }
-  }
-}
-
-function populateFabricTypes /*patched*/(){
-  [1,2].forEach(i=>{
-    const sel=document.getElementById('fabric'+i+'Type'); if(!sel) return;
-    sel.innerHTML='<option value="">Select fabric type</option>';
-    const order = Object.keys(FABRIC_GSM);
-    const ordered = [];
-    if (FABRIC_GSM["Polyester"]) ordered.push("Polyester");
-    if (FABRIC_GSM["Cotton"]) ordered.push("Cotton");
-    order.forEach(k=>{ if(!ordered.includes(k)) ordered.push(k); });
-    ordered.forEach(tk=>{
-      const o=document.createElement('option'); o.value=tk; o.textContent=tk; sel.appendChild(o);
+    ['size','width','length','product', 'togSelect','togCustom','fibre'].forEach(id=>{
+      d$(id).addEventListener('input', d_render);
+      d$(id).addEventListener('change', d_render);
     });
-  });
-}
-function setFabricDetailsVisibility(idx){
-  const typeEl = document.getElementById('fabric'+idx+'Type');
-  const type = (typeEl?.value || '').trim();
-  const show = !!type;
-  document.querySelectorAll('.fabric'+idx+'-detail').forEach(el=>{
-    el.style.display = show ? '' : 'none';
-  });
 
-  const grsRow = document.getElementById('fabric'+idx+'IsGRSRow');
-  const grsCheckbox = document.getElementById('fabric'+idx+'IsGRS');
-  if (grsRow){
-    const isPureCotton = type.toLowerCase() === 'cotton';
-    const shouldShowGRS = show && !isPureCotton;
-    grsRow.style.display = shouldShowGRS ? '' : 'none';
-    if (!shouldShowGRS && grsCheckbox){
-      grsCheckbox.checked = false;
+    document.getElementById('d-copyBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window._duvetSummary || '');
+        const btn = document.getElementById('d-copyBtn');
+        const old = btn.innerHTML;
+        btn.innerHTML = '✅';
+        setTimeout(() => (btn.innerHTML = old), 1200);
+      } catch {}
+    });
+
+    // init duvet
+    buildSizeOptions();
+    buildProductOptions();
+    fibreSel.value = 0;
+    d_render();
+
+    // ===== Pillow Calculator (scoped IDs with p- prefix) =====
+    const p$ = (id) => document.getElementById('p-' + id);
+    function p_calc(fill, pct){ return (fill * (pct/100) * 1.01) / 1000; }
+    function p_fmt(n, dp){ return Number.isFinite(n) ? n.toFixed(dp) : '—'; }
+
+    function p_render(){
+      const dict = i18n[currentLang] || i18n.en;
+      const fill = parseFloat(p$('fillWeight').value || 0);
+      const p1 = parseFloat(p$('pct1').value || 0);
+      const p2 = parseFloat(p$('pct2').value || 0);
+      const p3 = parseFloat(p$('pct3').value || 0);
+
+      const w1 = p_calc(fill, p1);
+      const w2 = p_calc(fill, p2);
+      const w3 = p_calc(fill, p3);
+
+      const rows = [
+        `<tr><td>Fibre 1</td><td class="num">${p1}%</td><td class="num">${p_fmt(w1,3)}</td></tr>`,
+        `<tr><td>Fibre 2</td><td class="num">${p2}%</td><td class="num">${p_fmt(w2,3)}</td></tr>`,
+        `<tr><td>Fibre 3</td><td class="num">${p3}%</td><td class="num">${p_fmt(w3,3)}</td></tr>`
+      ];
+      p$('rows').innerHTML = rows.join('');
+
+      window._pillowSummary = `${dict['dyn.summary.pillow.title']}\n${dict['dyn.summary.fill']}: ${fill} g\n%: F1 ${p1} | F2 ${p2} | F3 ${p3}\n${dict['dyn.summary.weights']}: F1 ${p_fmt(w1,3)}, F2 ${p_fmt(w2,3)}, F3 ${p_fmt(w3,3)}`;
     }
-  }
-}
-function onFabricTypeChange(idx){
-  const t=document.getElementById('fabric'+idx+'Type').value;
-  const gsm=document.getElementById('fabric'+idx+'GSM');
-  const chips=document.getElementById('fabric'+idx+'GSMChips');
-  if(FABRIC_GSM[t]){
-    gsm.value=FABRIC_GSM[t].mode_gsm||0;
-    chips.innerHTML=(FABRIC_GSM[t].common_gsms||[]).map(v=>
-      `<button type="button" class="chip chip-btn" role="button" tabindex="0" aria-label="Set GSM to ${v}" onclick="document.getElementById('fabric${idx}GSM').value=${v};refreshDerivedDebounced();">${v} GSM</button>`
-    ).join('');
-  } else {
-    chips.innerHTML='';
-  }
-  setFabricDetailsVisibility(idx);
 
-  if(idx===1){
-    const f1Sel=document.getElementById('fabric1Type');
-    const help1=document.getElementById('fabric1Help');
-    if(!t){ f1Sel.classList.add('danger'); help1.style.display='block'; }
-    else { f1Sel.classList.remove('danger'); help1.style.display='none'; }
-  }
-  if(idx===2){
-    const f2Sel=document.getElementById('fabric2Type');
-    const help2=document.getElementById('fabric2Help');
-    if(document.getElementById('numFabrics').value==='2' && !t){ f2Sel.classList.add('danger'); help2.style.display='block'; }
-    else { f2Sel.classList.remove('danger'); help2.style.display='none'; }
-  }
-  refreshDerivedDebounced();
-}
+    ['fillWeight','pct1','pct2','pct3'].forEach(id=>{
+      p$(id).addEventListener('input', p_render);
+      p$(id).addEventListener('change', p_render);
+    });
 
-/* ===== Archive (persist) ===== */
-let archive=[];
-const LS_KEY='grs_calc_archive_v6';
-function loadArchive(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw){ archive=JSON.parse(raw)||[]; } }catch(e){ archive=[]; } }
-function saveArchive(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(archive)); }catch(e){} }
-function renderArchive(){
-  const tb=document.querySelector('#archiveTable tbody'); if(!tb) return; tb.innerHTML='';
-  archive.forEach(it=>{
-    const tr=document.createElement('tr');
-    [it.timestamp,it.productName,fmt0(it.totalW),fmt0(it.totalGRS),fmt2(it.grsPct)+'%', (it.decision?.tier||'—')]
-      .forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td);});
-    tb.appendChild(tr);
-  });
-}
-function addToArchive(name,w,g,decision){
-  const now=new Date(); const pct=w>0?(g/w)*100:0;
-  archive.push({timestamp:now.toLocaleString(),productName:name,totalW:w,totalGRS:g,grsPct:pct,decision});
-  saveArchive();
-  renderArchive();
+    document.getElementById('p-copyBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window._pillowSummary || '');
+        const btn = document.getElementById('p-copyBtn');
+        const old = btn.innerHTML;
+        btn.innerHTML = '✅';
+        setTimeout(() => (btn.innerHTML = old), 1200);
+      } catch {}
+    });
 
-// Wire validation to liner/binding/finish fields
-var incLiner = document.getElementById('includeLiner'); if (incLiner){ incLiner.addEventListener('change', validateCanCalculate); }
-var linerG = document.getElementById('linerGSM'); if (linerG){ ['change','input'].forEach(ev=>linerG.addEventListener(ev, validateCanCalculate)); }
-var finishSel = document.getElementById('finishType'); if (finishSel){ finishSel.addEventListener('change', validateCanCalculate); }
-var incBinding = document.getElementById('includeBinding'); if (incBinding){ incBinding.addEventListener('change', validateCanCalculate); }
-var bindSel2 = document.getElementById('bindingCode'); if (bindSel2){ ['change','input'].forEach(ev=>bindSel2.addEventListener(ev, validateCanCalculate)); }
+    // init pillow
+    p_render();
+  
+    // ===== Enhancements: persistence, keyboard shortcuts, popovers, dialog/inert =====
+    const MAIN = document.querySelector('main');
 
-}
-
-/* ===== Layout toggles ===== */
-const duvetDims={ single:{length:200,width:135}, double:{length:200,width:200}, king:{length:220,width:230}, superking:{length:220,width:260}, emperor:{length:235,width:290} };
-function getRollWidth_cm(key){ if(key==='king'||key==='superking') return 240; if(key==='emperor') return 260; return 220; }
-function onDuvetSizeChange(){ const isCustom=document.getElementById('duvetSize').value==='custom'; document.getElementById('customSizeFields').style.display=isCustom?'block':'none'; }
-function onNumFabricsChange(){
-  const two = document.getElementById('numFabrics').value === '2';
-  document.getElementById('fabric2Section').style.display = two ? 'block' : 'none';
-  setFabricDetailsVisibility(2);
-  validateCanCalculate();
-}
-
-/* ===== Derived helpers ===== */
-function getDuvetArea_m2(){
-  const key=document.getElementById('duvetSize').value; let Lcm=0,Wcm=0;
-  if(key==='custom'){ Lcm=parseFloat(document.getElementById('customLength').value)||0; Wcm=parseFloat(document.getElementById('customWidth').value)||0; }
-  else { const d=duvetDims[key]; Lcm=d.length; Wcm=d.width; }
-  return (Lcm*Wcm)/10000; // 1-side m²
-}
-function refreshDerived(){
-  renderAutoFillingTable();
-}
-let _debT=null; function refreshDerivedDebounced(){ clearTimeout(_debT); _debT=setTimeout(refreshDerived, 80); }
-
-function onTogChange(){
-  const sel=document.getElementById('togExcel');
-  const custom=document.getElementById('togCustom');
-  if(!sel||!custom) return;
-  if(sel.value==='custom'){ custom.style.display='inline-block'; custom.focus(); }
-  else { custom.style.display='none'; }
-}
-function getSelectedTog(){
-  const sel=document.getElementById('togExcel');
-  if(!sel) return 10.5;
-  if(sel.value==='custom'){
-    const v=parseFloat(document.getElementById('togCustom').value);
-    return isNaN(v)?10.5:v;
-  }
-  return parseFloat(sel.value);
-}
-
-/* ===== Fabric calc ===== */
-function computeOneFabric(duvetArea_m2,isFirst,gsmVal,isGRS,sizeKey){
-  const rollW_cm=getRollWidth_cm(sizeKey);
-  const nf=document.getElementById('numFabrics').value;
-  const finalArea=isFirst?((nf==='1')?duvetArea_m2*2:duvetArea_m2):duvetArea_m2; // two sides if only one fabric
-  const finalLen=finalArea/(rollW_cm/100);
-  const weight_g=gsmVal*finalArea;
-  const grs_g=isGRS?weight_g:0;
-  return{area_m2:finalArea,length_m:finalLen,weight_g,grs_g};
-}
-
-/* ===== Filling (Excel logic) ===== */
-function initFibreDropdown(){
-  const sel=document.getElementById('fibreRecipe'); sel.innerHTML='';
-  FIBRE_TABLE.forEach(r=>{ const o=document.createElement('option'); o.value=r.fibre_name; o.textContent=r.fibre_name; sel.appendChild(o); });
-}
-function getConstantFor(recipe, tog, finishVal){
-  const c = recipe.constants||{}; const f = (finishVal||'').toLowerCase();
-  if (f.includes('nursery') && f.includes('without')) return c.nursery_no_corovin??0;
-  if (f.includes('nursery') && f.includes('with'))    return c.nursery_corovin??0;
-  if (tog <= 7.5) return c.leq7_5??0;
-  if (tog >= 9 && tog <= 10.5) return c.tog9_10_5??0;
-  if (tog === 13.5) return c.tog13_5??0;
-  if (tog === 15.0) return c.tog15_0??0;
-  return c.tog9_10_5??0;
-}
-function getFinishFactor(){
-  const finishSel=document.getElementById('finishType').value.toLowerCase();
-  return finishSel.includes('sonic') ? 1.028 : 1.0478;
-}
-function computeUsageKg(area1_m2, tog, constant, factor){
-  const kg=(area1_m2 * tog * constant * factor)/1000;
-  return Math.round(kg*100)/100; // 2dp
-}
-function splitToComponents(total_g, recipe){
-  return (recipe.components||[]).map((c,i)=>({
-    idx:i+1, code:c.code, prcnt:c.prcnt,
-    grams:+(total_g*(c.prcnt||0)).toFixed(3),
-    grs_grams:(c.isGRS?+(total_g*(c.prcnt||0)).toFixed(3):0)
-  }));
-}
-function calcFillingAuto(){
-  const tog=getSelectedTog();
-  const recipeName=document.getElementById('fibreRecipe').value;
-  const recipe=FIBRE_TABLE.find(r=>r.fibre_name===recipeName);
-  if(!recipe) return { total_g:0, grs_g:0, lines:[], meta:{} };
-
-  const area1=getDuvetArea_m2();
-  const constant=getConstantFor(recipe, tog, document.getElementById('finishType').value);
-  const factor=getFinishFactor();
-  const usageKg=computeUsageKg(area1, tog, constant, factor);
-  const total_g=Math.round(usageKg*1000);
-  const lines=splitToComponents(total_g, recipe);
-  const grs_g=lines.reduce((s,x)=>s+x.grs_grams,0);
-  const ci=document.getElementById('constInfo'); if(ci){ ci.textContent = `Constant: ${constant} • Factor: ${factor}`; }
-  return { total_g, grs_g, lines, meta:{area1,constant,factor,usageKg,tog} };
-}
-function renderAutoFillingTable(){
-  const t=calcFillingAuto();
-  const tb=document.getElementById('tbodyComponents'); tb.innerHTML="";
-  if(!t.lines.length){ tb.innerHTML=`<tr><td colspan="4" class="inline-note">Pick recipe to see lines.</td></tr>`; }
-  else{ t.lines.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.idx}</td><td>${r.code}</td><td class="right">${(r.prcnt*100).toFixed(1)}%</td><td class="right">${r.grams.toLocaleString()}</td>`; tb.appendChild(tr); }); }
-  document.getElementById('fillTotalGrams').textContent=(t.total_g||0).toLocaleString();
-  window._fibreComponentsForBOM=t;
-}
-
-/* ===== RCS/GRS decision ===== */
-function evaluateRcsGrs(opts){
-  const pct = Math.max(0, Math.min(100, Number(opts.recycledPct || 0)));
-  const hasCoC = true; // CoC kept implicit
-  const decision = { recycledPct:pct, hasCoC, standard:"None", tier:null, canUseLogo:false, canMarketAsCertified:false, allowedLogos:[], allowedClaims:[], notes:[] };
-  if (!hasCoC){ decision.notes.push("No Chain of Custody (CoC) → no certified claims or logos."); return decision; }
-  if (pct >= 50){ decision.standard="GRS"; decision.tier="GRS50"; decision.canUseLogo=true; decision.canMarketAsCertified=true; decision.allowedLogos.push("GRS"); decision.allowedClaims.push("On-product GRS logo and claims"); return decision; }
-  if (pct >= 20){ decision.standard="GRS"; decision.tier="GRS20"; decision.canUseLogo=false; decision.canMarketAsCertified=false; decision.allowedClaims.push("GRS claim (no on-product logo)"); decision.notes.push("GRS logo requires ≥50%."); return decision; }
-  if (pct >= 5){ decision.standard="RCS"; decision.tier="RCS"; decision.canUseLogo=true; decision.canMarketAsCertified=true; decision.allowedLogos.push("RCS"); decision.allowedClaims.push("On-product RCS logo and claims"); return decision; }
-  decision.notes.push("Recycled content below 5% → no RCS/GRS eligibility."); return decision;
-}
-function renderCertificationDecision(d, el){
-  if (!el) return; const fmt=(n)=>Number(n).toFixed(2).replace(/\.00$/,'');
-  const badges=[]; badges.push(`<span class="badge">${fmt(d.recycledPct)}% recycled</span>`);
-  let headline="", detail="", toneClass="warn";
-  if (d.tier === "GRS50"){ headline="GRS ✓ Logo allowed"; detail="GRS certification and on-product logo permitted."; toneClass="ok"; }
-  else if (d.tier === "GRS20"){ headline="GRS claim only (no logo)"; detail="Logo requires ≥50% recycled content."; toneClass="warn"; }
-  else if (d.tier === "RCS"){ headline="RCS ✓ Logo allowed"; detail="RCS certification with on-product logo permitted."; toneClass="ok"; }
-  else { headline="Not eligible"; detail="Recycled content below 5%."; toneClass="no"; }
-  el.innerHTML = `<h3 style="margin:0 0 6px">Certification & Logo Decision</h3><div class="badge ${toneClass}" style="margin-bottom:.4rem">${headline}</div><div class="muted tiny">${detail}</div><div style="margin-top:.5rem">${badges.join("")}</div>`;
-  el.hidden = false;
-}
-
-/* ===== Main calc ===== */
-const fmt0 = (n)=>Number(n||0).toFixed(0);
-const fmt2 = (n)=>Number(n||0).toFixed(2);
-
-function calcDetailed(){
-  const area1=getDuvetArea_m2();
-  const sizeKey=document.getElementById('duvetSize').value;
-
-  const f1=computeOneFabric(area1,true,
-    parseFloat(document.getElementById('fabric1GSM').value)||0,
-    document.getElementById('fabric1IsGRS').checked,sizeKey);
-
-  let f2={area_m2:0,length_m:0,weight_g:0,grs_g:0};
-  if(document.getElementById('numFabrics').value==='2'){
-    f2=computeOneFabric(area1,false,
-      parseFloat(document.getElementById('fabric2GSM').value)||0,
-      document.getElementById('fabric2IsGRS').checked,sizeKey);
-  }
-
-  // Filling
-  const fill=calcFillingAuto();
-
-  // Lining with coverage logic
-  let linerW = 0, linerG = 0;
-  if (document.getElementById('includeLiner').checked){
-    const gsm = parseFloat(document.getElementById('linerGSM').value) || 0;
-    const isg = document.getElementById('linerIsGRS').checked;
-    const two = document.getElementById('numFabrics').value === '2';
-    let coverage = 'both';
-    if (two){
-      const covSel = document.getElementById('linerCoverage');
-      coverage = covSel ? (covSel.value || 'both') : 'both';
+    // --- Persist/restore inputs ---
+    const persistKeys = ['d-size','d-width','d-length','d-product','d-togSelect','d-togCustom','d-fibre','p-fillWeight','p-pct1','p-pct2','p-pct3'];
+    function saveState(){
+      const data = {};
+      for(const id of persistKeys){
+        const el = document.getElementById(id);
+        if(!el) continue;
+        data[id] = el.value;
+      }
+      data['calc-lang'] = currentLang;
+      localStorage.setItem('calc-state', JSON.stringify(data));
     }
-    const multiplier = (two && coverage === 'one') ? 1 : 2; // one side vs both
-    linerW = gsm * (area1 * multiplier);
-    linerG = isg ? linerW : 0;
-  }
-
-  // Binding
-  let bindW=0,bindG=0;
-  if(document.getElementById('includeBinding').checked){
-    const code=(document.getElementById('bindingCode')||{}).value||'';
-    const gpm=BINDING_GPM[code]||0;
-    let Lcm,Wcm; if(sizeKey==='custom'){Lcm=parseFloat(document.getElementById('customLength').value)||0; Wcm=parseFloat(document.getElementById('customWidth').value)||0;} else {const d=duvetDims[sizeKey]; Lcm=d.length; Wcm=d.width;}
-    const perimeter_m=2*((Lcm+Wcm)/100);
-    bindW=gpm*perimeter_m; bindG=(window.isGRSBindingCode(code)||document.getElementById('bindingIsGRS').checked)?bindW:0;
-  }
-
-  const totalWeight = f1.weight_g+f2.weight_g + fill.total_g + linerW + bindW;
-  const totalGRS    = f1.grs_g+f2.grs_g + fill.grs_g + linerG + bindG;
-
-  return { f1,f2,fill, linerW,linerG, bindW,bindG, totalWeight_g:totalWeight, totalGRS_g:totalGRS };
-}
-
-function showInlineError(msg, elToFocus){
-  const box = document.getElementById('inlineErrors'); if(!box) return;
-  box.textContent = msg || ''; box.style.display = msg ? 'block' : 'none';
-  if(elToFocus){ elToFocus.scrollIntoView({behavior:'smooth',block:'center'}); elToFocus.focus?.(); }
-}
-
-function calculateAll(){
-  showInlineError('');
-  const pNameEl = document.getElementById('productName');
-  const pName = (pNameEl?.value || '').trim();
-  if (!pName){
-    if (pNameEl) pNameEl.classList.add('danger');
-    showInlineError('Product Name is required to calculate.', pNameEl || null);
-    return;
-  }
-
-  // Liner guard
-  const includeLiner = document.getElementById('includeLiner');
-  if (includeLiner && includeLiner.checked){
-    const lG = document.getElementById('linerGSM');
-    const lHelp = document.getElementById('linerGSMHelp');
-    const v = parseFloat(lG && lG.value);
-    if (!lG || isNaN(v) || v <= 0){
-      if (lG) lG.classList.add('danger');
-      if (lHelp) lHelp.style.display='block';
-      showInlineError('Enter Lining GSM (g/m²).', lG || includeLiner);
-      if (typeof validateCanCalculate === 'function') validateCanCalculate();
-      return;
+    function loadState(){
+      try {
+        const raw = localStorage.getItem('calc-state');
+        if(!raw) return;
+        const data = JSON.parse(raw);
+        for(const id of persistKeys){
+          if(data[id] == null) continue;
+          const el = document.getElementById(id);
+          if(!el) continue;
+          el.value = data[id];
+          el.dispatchEvent(new Event('change', {bubbles:true}));
+          el.dispatchEvent(new Event('input', {bubbles:true}));
+        }
+        if(data['calc-lang']){
+          currentLang = data['calc-lang'];
+          nf2 = new Intl.NumberFormat(currentLang, { maximumFractionDigits: 2 });
+          applyI18n(currentLang);
+          updateLangButton();
+          buildSizeOptions();
+          buildProductOptions();
+        }
+        d_render();
+        p_render();
+      } catch {}
     }
-  }
-
-  // Binding guard
-  const finishSel = document.getElementById('finishType');
-  const includeBinding = document.getElementById('includeBinding');
-  const bindSel = document.getElementById('bindingCode');
-  const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
-  if (needsBinding && (!bindSel || !bindSel.value)){
-    if (bindSel) bindSel.classList.add('danger');
-    showInlineError('Select a Binding Code when Bound Duvets/Binding is chosen.', bindSel || includeBinding);
-    if (typeof validateCanCalculate === 'function') validateCanCalculate();
-    return;
-  }
-
-  // Require Fabric 1 always
-  const f1Sel = document.getElementById('fabric1Type');
-  if (!f1Sel || !f1Sel.value){
-    const help1 = document.getElementById('fabric1Help');
-    if (help1) help1.style.display='block';
-    if (f1Sel) f1Sel.classList.add('danger');
-    showInlineError('Select Fabric 1 type.', f1Sel || null);
-    if (typeof validateCanCalculate === 'function') validateCanCalculate();
-    return;
-  }
-
-  // Fabric 2 when applicable
-  if (document.getElementById('numFabrics').value === '2'){
-    const f2Sel = document.getElementById('fabric2Type');
-    if (!f2Sel || !f2Sel.value){
-      const help2 = document.getElementById('fabric2Help');
-      if (help2) help2.style.display='block';
-      if (f2Sel) f2Sel.classList.add('danger');
-      showInlineError('Select Fabric 2 type.', f2Sel || null);
-      if (typeof validateCanCalculate === 'function') validateCanCalculate();
-      return;
-    }
-  }
-
-  const det=calcDetailed();
-  const totalW=det.totalWeight_g, totalGRS=det.totalGRS_g;
-  const pct=totalW>0?(totalGRS/totalW)*100:0;
-
-  // Decision above results
-  const decision = evaluateRcsGrs({ recycledPct: pct, hasCoC: true });
-  renderCertificationDecision(decision, document.getElementById('certDecision'));
-
-  // Results body
-  let html=`<h3 style="margin:0 0 6px">Results</h3><div class="inline-note">Product: <strong>${pName}</strong></div>`;
-  html+=`<div class="stats">
-    <div class="stat"><div class="k">Fabric 1 length</div><div class="v">${det.f1.length_m.toFixed(2)} m</div><div class="c">Fabric 1 length (m)</div></div>
-    <div class="stat"><div class="k">Fabric 2 length</div><div class="v">${(det.f2.length_m||0).toFixed(2)} m</div><div class="c">Fabric 2 length (m)</div></div>
-    <div class="stat"><div class="k">Filling total</div><div class="v">${(det.fill.total_g||0).toFixed(0)} g</div><div class="c">Filling total (g)</div></div>
-  </div>`;
-  html+=`<div class="stats">
-    <div class="stat"><div class="k">Fabric 1 weight</div><div class="v">${det.f1.weight_g.toFixed(0)} g</div><div class="c">Top (and bottom if 1 fabric)</div></div>
-    <div class="stat"><div class="k">Fabric 2 weight</div><div class="v">${(det.f2.weight_g||0).toFixed(0)} g</div><div class="c">Bottom</div></div>
-    <div class="stat"><div class="k">Lining weight</div><div class="v">${det.linerW.toFixed(0)} g</div><div class="c">Coverage applied</div></div>
-  </div>`;
-  html+=`<div class="stats">
-    <div class="stat"><div class="k">Binding weight</div><div class="v">${det.bindW.toFixed(0)} g</div><div class="c">From g/m × perimeter</div></div>
-    <div class="stat"><div class="k">Total weight</div><div class="v">${totalW.toFixed(0)} g</div><div class="c">All components</div></div>
-    <div class="stat"><div class="k">GRS weight</div><div class="v">${totalGRS.toFixed(0)} g</div><div class="c">Fabrics + filling + lining + binding</div></div>
-  </div>`;
-  html+=`<div class="stats">
-    <div class="stat"><div class="k">GRS %</div><div class="v">${pct.toFixed(2)}%</div><div class="c">Recycled content</div></div>
-  </div>`;
-
-  if(det.fill.lines?.length){
-    html+=`<div class="inline-note" style="margin-top:8px">Filling components:</div><table><thead><tr><th>#</th><th>Code</th><th class="right">%</th><th class="right">g</th></tr></thead><tbody>`;
-    det.fill.lines.forEach(r=>{ html+=`<tr><td>${r.idx}</td><td>${r.code}</td><td class="right">${(r.prcnt*100).toFixed(1)}%</td><td class="right">${r.grams.toFixed(3)}</td></tr>`; });
-    html+=`</tbody></table>`;
-  }
-
-  document.getElementById('results').innerHTML=html;
-  addToArchive(pName,totalW,totalGRS,decision);
-  // keep a snapshot for per-SKU export
-  window._lastCalc = {
-    name: pName,
-    sizeLabel: (document.getElementById('duvetSize').selectedOptions[0]||{}).text || document.getElementById('duvetSize').value,
-    finish: document.getElementById('finishType').value,
-    tog: getSelectedTog(),
-    recipeName: document.getElementById('fibreRecipe').value,
-    f1: det.f1, f2: det.f2, fill: det.fill,
-    linerW: det.linerW, bindW: det.bindW,
-    totalWeight_g: totalW, totalGRS_g: totalGRS,
-    grsPct: pct,
-    linerCoverageText: (function(){ 
-      const two = document.getElementById('numFabrics').value === '2';
-      if(!document.getElementById('includeLiner').checked) return '';
-      if(two){ const sel=document.getElementById('linerCoverage'); return (sel && sel.value==='one') ? 'One-side coverage' : 'Both sides'; }
-      return 'Coverage applied';
-    })(),
-    decision: decision
-  };
-}
-
-/* ===== Menu helpers ===== */
-function toggleMenu(ev,id){
-  if(ev && typeof ev.stopPropagation === 'function'){ ev.stopPropagation(); }
-  if(!id) return;
-  document.querySelectorAll('.menu').forEach(menu=>{
-    if(menu.id !== id){ menu.classList.remove('open'); }
-  });
-  const target = document.getElementById(id);
-  if(target){ target.classList.toggle('open'); }
-}
-function closeMenu(id){
-  if(id){
-    const target = document.getElementById(id);
-    if(target){ target.classList.remove('open'); }
-  } else {
-    document.querySelectorAll('.menu').forEach(menu=>menu.classList.remove('open'));
-  }
-}
-document.addEventListener('click',function(e){
-  document.querySelectorAll('.menu').forEach(menu=>{
-    if(!menu.contains(e.target)) menu.classList.remove('open');
-  });
-});
-
-/* ===== SKU EXPORT HELPERS (decision included) ===== */
-function getLastCalcSnapshot(){
-  if(!window._lastCalc) return null;
-  return JSON.parse(JSON.stringify(window._lastCalc));
-}
-function decisionBadgeHtml(d){
-  if(!d) return '';
-  const fmt=(n)=>Number(n).toFixed(2).replace(/\.00$/,'');
-  let cls='warn', text='Not eligible', detail=''; 
-  if (d.tier === "GRS50"){ cls="ok"; text="GRS ✓ Logo allowed"; detail="GRS certification and on-product logo permitted."; }
-  else if (d.tier === "GRS20"){ cls="warn"; text="GRS claim only (no logo)"; detail="Logo requires ≥50% recycled content."; }
-  else if (d.tier === "RCS"){ cls="ok"; text="RCS ✓ Logo allowed"; detail="RCS certification with on-product logo permitted."; }
-  else { cls="no"; text="Not eligible"; detail="Recycled content below 5%."; }
-  return `<div class="badge ${cls}">${text}</div><div class="small">${detail}</div><div class="small">${fmt(d.recycledPct)}% recycled</div>`;
-}
-function buildSkuHTML(calc){
-  const name = (calc?.name||'SKU');
-  const fillLines = (calc?.fill?.lines||[]).map(r=>`<tr><td>${r.idx}</td><td>${r.code}</td><td style="text-align:right">${(r.prcnt*100).toFixed(1)}%</td><td style="text-align:right">${r.grams.toFixed(3)}</td></tr>`).join('') || '<tr><td colspan="4" class="small">No filling lines.</td></tr>';
-  const decision = calc?.decision ? decisionBadgeHtml(calc.decision) : '';
-  const safeInitScript = [
-    '<script>',
-    '// --- Safety re-init: repopulate fabric/fibre dropdowns even if earlier init was skipped ---',
-    '(function(){',
-    '  let __safeInitRan = false;',
-    '  window.__safeInitOnce = function(){',
-    '    if (__safeInitRan) return;',
-    '    __safeInitRan = true;',
-    '    try{ populateBindingCodes && populateBindingCodes(); }catch(e){}',
-    '    try{ populateFabricTypes && populateFabricTypes(); }catch(e){}',
-    '    try{ initFibreDropdown && initFibreDropdown(); }catch(e){}',
-    '    try{ renderAutoFillingTable && renderAutoFillingTable(); }catch(e){}',
-    '    try{ validateCanCalculate && validateCanCalculate(); }catch(e){}',
-    '  };',
-    '  if (document.readyState !== \'loading\'){ __safeInitOnce(); }',
-    '  window.addEventListener(\'DOMContentLoaded\', __safeInitOnce);',
-    '  window.addEventListener(\'load\', __safeInitOnce);',
-    '  setTimeout(__safeInitOnce, 200);',
-    '  setTimeout(__safeInitOnce, 800);',
-    '})();',
-    '</scr' + 'ipt>'
-  ].join('\n');
-
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>SKU Sheet - ${name}</title>
-<style>
-body{font-family:Inter, Segoe UI, Roboto, Arial, sans-serif;margin:0;background:#fff;color:#202121}
-.wrap{max-width:960px;margin:24px auto;padding:0 16px}
-.header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.logo{font-weight:800;background:#D7D2CB;color:#363A36;border-radius:999px;padding:6px 12px;white-space:nowrap}
-h1{font-size:18px;margin:0}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
-@media(max-width:720px){ .grid{grid-template-columns:1fr} }
-.card{border:1px solid #E4E3E0;border-radius:14px;padding:12px;background:#fff}
-.k{font-size:12px;color:#666}
-.v{font-size:20px;font-weight:900;margin-top:4px}
-.c{font-size:11px;color:#888;margin-top:2px}
-.badge{display:inline-block;padding:.24rem .5rem;border-radius:9px;font-weight:800;font-size:.86rem;margin-right:.35rem}
-.ok{background:#e9f6ee;color:#1a7f37;border:1px solid #d5eadc}
-.warn{background:#fff7e6;color:#b8860b;border:1px solid #f3dfb3}
-.no{background:#fdecec;color:#a5282c;border:1px solid #f5c3c7}
-table{width:100%;border-collapse:collapse;margin-top:8px}
-th,td{padding:8px 10px;border-bottom:1px solid #E4E3E0;text-align:left;font-size:13px}
-thead th{background:#F7F6F4}
-.small{font-size:12px;color:#61635f;margin:6px 0 10px}
-.footer{margin-top:12px;font-size:11px;color:#888}
-</style></head>
-<body>
-<div class="wrap">
-  <div class="header"><div class="logo">The Fine Bedding Company</div><h1>GRS Duvet — ${name}</h1></div>
-  <div class="small">Size: ${calc.sizeLabel||'-'} • Finish: ${calc.finish||'-'} • TOG: ${calc.tog||'-'} • Recipe: ${calc.recipeName||'-'}</div>
-  ${decision}
-  <div class="grid" id="sku-cards">
-    <div class="card"><div class="k">Fabric 1 length</div><div class="v">${(calc.f1.length_m||0).toFixed(2)} m</div><div class="c">Fabric 1 length (m)</div></div>
-    <div class="card"><div class="k">Fabric 2 length</div><div class="v">${(calc.f2.length_m||0).toFixed(2)} m</div><div class="c">Fabric 2 length (m)</div></div>
-    <div class="card"><div class="k">Filling total</div><div class="v">${(calc.fill.total_g||0).toFixed(0)} g</div><div class="c">Filling total (g)</div></div>
-
-    <div class="card"><div class="k">Fabric 1 weight</div><div class="v">${(calc.f1.weight_g||0).toFixed(0)} g</div><div class="c">Top (and bottom if 1 fabric)</div></div>
-    <div class="card"><div class="k">Fabric 2 weight</div><div class="v">${(calc.f2.weight_g||0).toFixed(0)} g</div><div class="c">Bottom</div></div>
-    <div class="card"><div class="k">Lining weight</div><div class="v">${(calc.linerW||0).toFixed(0)} g</div><div class="c">${calc.linerCoverageText||'Coverage applied'}</div></div>
-
-    <div class="card"><div class="k">Binding weight</div><div class="v">${(calc.bindW||0).toFixed(0)} g</div><div class="c">From g/m × perimeter</div></div>
-    <div class="card"><div class="k">Total weight</div><div class="v">${(calc.totalWeight_g||0).toFixed(0)} g</div><div class="c">All components</div></div>
-    <div class="card"><div class="k">GRS weight</div><div class="v">${(calc.totalGRS_g||0).toFixed(0)} g</div><div class="c">Fabrics + filling + lining + binding</div></div>
-
-    <div class="card"><div class="k">GRS %</div><div class="v">${(calc.grsPct||0).toFixed(2)}%</div><div class="c">Recycled content</div></div>
-    <div class="card" style="grid-column:span 2"><div class="k">Filling components</div>
-      <table><thead><tr><th>#</th><th>Code</th><th style="text-align:right">%</th><th style="text-align:right">g</th></tr></thead>
-      <tbody>${fillLines}</tbody></table>
-    </div>
-  </div>
-  <div class="footer">Auto-generated SKU sheet • ${new Date().toLocaleString()}</div>
-</div>
-
-${safeInitScript}
-
-</body></html>`;
-}
-function exportSkuHTML(){
-  const calc = getLastCalcSnapshot();
-  if(!calc){ showInlineError('No calculation available. Click Calculate first.'); return; }
-  const html = buildSkuHTML(calc);
-  const blob = new Blob([html], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=(calc.name||'sku')+'.html'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-function exportSkuPNG(){
-  const calc = getLastCalcSnapshot();
-  if(!calc){ showInlineError('No calculation available to export SKU PNG.'); return; }
-  const html = buildSkuHTML(calc);  // includes decision
-  const tmp = document.createElement('div');
-  tmp.style.position = 'fixed';
-  tmp.style.left = '-9999px';
-  tmp.innerHTML = html;
-  document.body.appendChild(tmp);
-  const target = tmp.querySelector('.wrap');
-  html2canvas(target, { scale: 2 }).then(canvas=>{
-    const a=document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = (calc.name||'sku') + '.png';
-    a.click();
-    tmp.remove();
-  }).catch(err=>{
-    tmp.remove();
-    showInlineError('Failed to export PNG: '+err);
-  });
-}
-function exportCSV(){
-  if(archive.length===0){ showInlineError('No archive entries to export.'); return; }
-  let csv='data:text/csv;charset=utf-8,Date/Time,Product Name,Total Wt (g),GRS Wt (g),GRS %,Tier\r\n';
-  archive.forEach(it=>{ csv+=[`"${it.timestamp}"`,`"${it.productName}"`,Number(it.totalW).toFixed(0),Number(it.totalGRS).toFixed(0),Number(it.grsPct).toFixed(2)+'%', (it.decision?.tier||'')].join(',')+'\r\n'; });
-  const a=document.createElement('a'); a.href=encodeURI(csv); a.download='duvet_archive.csv'; document.body.appendChild(a); a.click(); a.remove();
-}
-
-
-function onLinerGSMInput(){
-  const gsm = document.getElementById('linerGSM');
-  const help = document.getElementById('linerGSMHelp');
-  if(!gsm) return;
-  const val = parseFloat(gsm.value);
-  const ok = (!isNaN(val) && val > 0) ;
-  if (ok){ gsm.classList.remove('danger'); if(help) help.style.display='none'; }
-  if (typeof validateCanCalculate === 'function') validateCanCalculate();
-  if (typeof refreshDerivedDebounced === 'function') refreshDerivedDebounced();
-}
-
-// Auto-enable lining when any fabric is cotton
-function syncLiningWithFabrics(){
-  var inc = document.getElementById('includeLiner');
-  if(!inc) return;
-  function isCotton(selId){
-    var sel = document.getElementById(selId);
-    if(!sel) return false;
-    var val = (sel.value || '').toLowerCase();
-    var txt = '';
-    try { txt = (sel.options[sel.selectedIndex]?.text || '').toLowerCase(); } catch(e){}
-    // Treat as cotton if either the value or the option text mentions cotton (or "ct" pattern in codes)
-    return val.includes('cotton') || txt.includes('cotton') || /\bct\b/.test(val);
-  }
-  if (isCotton('fabric1Type') || isCotton('fabric2Type')){
-    if (!inc.checked){
-      inc.checked = true; // placeholder to be replaced with true
-    }
-    if (typeof toggleLiningDetailed === 'function') toggleLiningDetailed();
-    if (typeof validateCanCalculate === 'function') validateCanCalculate();
-  }
-}
-
-/* ===== Validation helpers ===== */
-
-function validateCanCalculate(){
-  const calcBtn = document.getElementById('calcBtn');
-
-  // --- Name ---
-  const nameEl = document.getElementById('productName');
-  const nameOk = !!(nameEl && (nameEl.value || '').trim().length > 0);
-  if (nameEl){
-    if (nameOk){ nameEl.classList.remove('danger'); }
-    else { nameEl.classList.add('danger'); }
-  }
-  const note = document.getElementById('productNameNote');
-  if (note) note.style.display = nameOk ? 'none' : 'block';
-
-  // --- Fabrics ---
-  const f1Sel = document.getElementById('fabric1Type');
-  const f1Ok = !!(f1Sel && f1Sel.value);
-  const help1 = document.getElementById('fabric1Help');
-  if (f1Sel){
-    if (f1Ok){ f1Sel.classList.remove('danger'); if (help1) help1.style.display='none'; }
-    else { f1Sel.classList.add('danger'); if (help1) help1.style.display='block'; }
-  }
-  setFabricDetailsVisibility(1);
-
-  const numFabsEl = document.getElementById('numFabrics');
-  const numFabs = numFabsEl ? numFabsEl.value : '1';
-  const f2Sel = document.getElementById('fabric2Type');
-  const f2Help = document.getElementById('fabric2Help');
-  let f2Ok = true;
-  if (numFabs === '2'){ f2Ok = !!(f2Sel && f2Sel.value); }
-  if (f2Sel){
-    if (numFabs === '2' && !f2Ok){ f2Sel.classList.add('danger'); if (f2Help) f2Help.style.display='block'; }
-    else { f2Sel.classList.remove('danger'); if (f2Help) f2Help.style.display='none'; }
-  }
-  setFabricDetailsVisibility(2);
-
-  // --- Liner GSM mandatory when liner is included ---
-  const includeLiner = document.getElementById('includeLiner');
-  let linerOk = true;
-  if (includeLiner && includeLiner.checked){
-    const linerGSM = document.getElementById('linerGSM');
-    const linerHelp = document.getElementById('linerGSMHelp');
-    const value = parseFloat(linerGSM && linerGSM.value);
-    linerOk = !!(linerGSM && !isNaN(value) && value > 0);
-    if (linerGSM){
-      if (linerOk){ linerGSM.classList.remove('danger'); }
-      else { linerGSM.classList.add('danger'); }
-    }
-    if (linerHelp) linerHelp.style.display = linerOk ? 'none' : 'block';
-  } else {
-    const linerGSM = document.getElementById('linerGSM');
-    const linerHelp = document.getElementById('linerGSMHelp');
-    if (linerGSM) linerGSM.classList.remove('danger');
-    if (linerHelp) linerHelp.style.display = 'none';
-  }
-
-  // --- Binding mandatory when finish=Bound Duvets OR Include Binding is on ---
-  if (typeof validateBindingSelect === 'function') validateBindingSelect();
-  let bindingOk = true;
-  try {
-    const finishSel = document.getElementById('finishType');
-    const includeBinding = document.getElementById('includeBinding');
-    const bindSel = document.getElementById('bindingCode');
-    const needsBinding = (finishSel && finishSel.value === 'Bound Duvets') || (includeBinding && includeBinding.checked);
-    if (needsBinding){
-      bindingOk = !!(bindSel && bindSel.value);
-      if (bindSel){
-        if (bindingOk){ bindSel.classList.remove('danger'); }
-        else { bindSel.classList.add('danger'); }
+    // Hook save on input changes
+    for(const id of persistKeys){
+      const el = document.getElementById(id);
+      if(el){
+        el.addEventListener('input', saveState);
+        el.addEventListener('change', saveState);
       }
     }
-  } catch(e){ bindingOk = true; }
 
-  const ok = nameOk && f1Ok && f2Ok && linerOk && bindingOk;
-  if (calcBtn) calcBtn.disabled = !ok;
-}
+    // Restore after initial render
+    loadState();
 
-/* ===== Reset & init ===== */
-function resetAll(){
-  document.getElementById('productName').value='';
-  document.getElementById('duvetSize').value='double';
-  document.getElementById('customLength').value='200';
-  document.getElementById('customWidth').value='200';
-  document.getElementById('numFabrics').value='1';
-  document.getElementById('fabric1Type').value='';
-  document.getElementById('fabric1GSM').value='0';
-  document.getElementById('fabric1IsGRS').checked=false;
-  document.getElementById('fabric2Section').style.display='none';
-  document.getElementById('fabric2Type').value='';
-  document.getElementById('fabric2GSM').value='0';
-  document.getElementById('fabric2IsGRS').checked=false;
-  document.getElementById('finishType').value='Sonic Seam';
-  document.getElementById('togExcel').value='10.5';
-  document.getElementById('togCustom').value='';
-  initFibreDropdown(); renderAutoFillingTable();
-  document.getElementById('includeBinding').checked=false; document.getElementById('bindingDetailedFields').style.display='none';
-  document.getElementById('bindingCode').value=''; document.getElementById('bindingGPMView').textContent='0'; document.getElementById('bindingIsGRS').checked=false; document.getElementById('bindingCode').classList.remove('danger');
-  document.getElementById('includeLiner').checked=false; document.getElementById('linerDetailedFields').style.display='none'; document.getElementById('linerGSM').value='0'; document.getElementById('linerIsGRS').checked=false; document.getElementById('linerGSM').classList.remove('danger');
-  document.getElementById('results').innerHTML=''; document.getElementById('certDecision').hidden=true; document.getElementById('inlineErrors').style.display='none';
-  refreshDerived(); validateCanCalculate();
-}
-function _populateAllOnce(){ try{populateBindingCodes();onBindingCodeChange();}catch(e){} try{populateFabricTypes();}catch(e){} try{initFibreDropdown();}catch(e){} try{renderAutoFillingTable();}catch(e){} }
-document.addEventListener('DOMContentLoaded',_populateAllOnce);
-window.addEventListener('load', function(){
-  // Initial data/render
-  loadArchive && loadArchive();
-  _populateAllOnce && _populateAllOnce();
-  validateCanCalculate && validateCanCalculate();
-  onTogChange && onTogChange();
-  refreshDerived && refreshDerived();
-  renderArchive && renderArchive();
-
-  // Event wiring
-  var f1 = document.getElementById('fabric1Type'); if (f1){ ['change','input'].forEach(ev=>f1.addEventListener(ev, validateCanCalculate)); f1.addEventListener('change', syncLiningWithFabrics); }
-  var f2 = document.getElementById('fabric2Type'); if (f2){ ['change','input'].forEach(ev=>f2.addEventListener(ev, validateCanCalculate)); f2.addEventListener('change', syncLiningWithFabrics); }
-  var nf = document.getElementById('numFabrics'); if (nf){ ['change','input'].forEach(ev=>nf.addEventListener(ev, validateCanCalculate)); }
-
-  var finishSel = document.getElementById('finishType'); if (finishSel){ finishSel.addEventListener('change', function(){ onFinishChange && onFinishChange(); validateCanCalculate && validateCanCalculate(); }); }
-
-  var incLiner = document.getElementById('includeLiner'); if (incLiner){ incLiner.addEventListener('change', function(){ toggleLiningDetailed && toggleLiningDetailed(); validateCanCalculate && validateCanCalculate(); }); }
-  var linerG = document.getElementById('linerGSM'); if (linerG){ ['change','input'].forEach(ev=>linerG.addEventListener(ev, validateCanCalculate)); }
-
-  var incBinding = document.getElementById('includeBinding'); if (incBinding){ incBinding.addEventListener('change', function(){ toggleBindingDetailed && toggleBindingDetailed(); validateCanCalculate && validateCanCalculate(); }); }
-  var bindSel = document.getElementById('bindingCode'); if (bindSel){ ['change','input'].forEach(ev=>{ bindSel.addEventListener(ev, validateBindingSelect); bindSel.addEventListener(ev, validateCanCalculate); }); }
-
-  var reset = document.getElementById('resetBtn'); if (reset){ reset.addEventListener('click', resetAll); }
-
-  const adminOverlay = document.getElementById('adminOverlay');
-  if(adminOverlay){
-    adminOverlay.addEventListener('click', function(ev){
-      if(ev.target === adminOverlay){ closeAdminPanel(); }
+    // Language switching
+    langBtn.addEventListener('click', ()=>{
+      currentLang = currentLang === 'en' ? 'et' : 'en';
+      localStorage.setItem('calc-lang', currentLang);
+      nf2 = new Intl.NumberFormat(currentLang, { maximumFractionDigits: 2 });
+      applyI18n(currentLang);
+      buildSizeOptions();
+      buildProductOptions();
+      d_render();
+      p_render();
+      updateLangButton();
     });
-  }
 
-  // One more sync pass
-  syncLiningWithFabrics && syncLiningWithFabrics();
-  syncLiningWithFinish && syncLiningWithFinish();
-  syncFinishAndBindingUI && syncFinishAndBindingUI();
-});
-
-document.addEventListener('keydown', function(ev){
-  if(ev.key === 'Escape'){
-    const overlay = document.getElementById('adminOverlay');
-    if(overlay && overlay.classList.contains('open')){
-      closeAdminPanel();
+    // --- Popover toasts on copy ---
+    const duvetToast = document.getElementById('duvetToast');
+    const pillowToast = document.getElementById('pillowToast');
+    function showToast(el){
+      if(!el?.showPopover) return;
+      try{
+        el.showPopover();
+        setTimeout(()=> el.hidePopover?.(), 1400);
+      }catch{}
     }
-  }
-});
-</script>
+    document.getElementById('d-copyBtn').addEventListener('click', ()=> showToast(duvetToast));
+    document.getElementById('p-copyBtn').addEventListener('click', ()=> showToast(pillowToast));
 
-<script>
-// --- Safety re-init: repopulate fabric/fibre dropdowns even if earlier init was skipped ---
-(function(){
-  let __safeInitRan = false;
-  window.__safeInitOnce = function(){
-    if (__safeInitRan) return;
-    __safeInitRan = true;
-    try{ populateBindingCodes && populateBindingCodes(); }catch(e){}
-    try{ populateFabricTypes && populateFabricTypes(); }catch(e){}
-    try{ initFibreDropdown && initFibreDropdown(); }catch(e){}
-    try{ renderAutoFillingTable && renderAutoFillingTable(); }catch(e){}
-    try{ validateCanCalculate && validateCanCalculate(); }catch(e){}
-  };
-  if (document.readyState !== 'loading'){ __safeInitOnce(); }
-  window.addEventListener('DOMContentLoaded', __safeInitOnce);
-  window.addEventListener('load', __safeInitOnce);
-  setTimeout(__safeInitOnce, 200);
-  setTimeout(__safeInitOnce, 800);
-})();
-</script>
+    // --- Keyboard shortcuts ---
+    window.addEventListener('keydown', (e) => {
+      // ignore when typing in inputs
+      const tag = (e.target?.tagName || '').toLowerCase();
+      if(tag === 'input' || tag === 'select' || tag === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
 
+      if(e.key.toLowerCase() === 't'){ e.preventDefault(); themeBtn.click(); }
+      if(e.key.toLowerCase() === 'c'){
+        e.preventDefault();
+        const isDuvet = tabDuvet.getAttribute('aria-selected') === 'true';
+        (isDuvet ? document.getElementById('d-copyBtn') : document.getElementById('p-copyBtn')).click();
+      }
+      if(e.key === '?'){
+        e.preventDefault();
+        document.getElementById('helpPop')?.showPopover?.();
+      }
+    });
+
+  </script>
 </body>
 </html>
-
