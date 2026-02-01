@@ -1,9 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { PillowInputs, type PillowFormState } from "@/components/PillowInputs";
 import { PillowResults } from "@/components/PillowResults";
-import { BreakdownTable } from "@/components/BreakdownTable";
-import { TableToolbar } from "@/components/TableToolbar";
 import { calculatePillow } from "@/lib/calculators/pillow";
 import { useLocalStorageState } from "@/lib/hooks/useLocalStorageState";
 import { useI18n } from "@/lib/hooks/useI18n";
@@ -16,9 +14,31 @@ const defaultState: PillowFormState = {
   pct3: 20
 };
 
+const clampFinite = (value: number, min: number, max: number) => {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
+const normalizePcts = (state: PillowFormState) => {
+  const next1 = clampFinite(state.pct1, 0, 100);
+  const next2 = clampFinite(state.pct2, 0, 100 - next1);
+  const next3 = 100 - next1 - next2;
+  return { ...state, pct1: next1, pct2: next2, pct3: next3 };
+};
+
 export function PillowView() {
   const [state, setState] = useLocalStorageState<PillowFormState>("calc-pillow", defaultState);
   const { t } = useI18n();
+
+  useEffect(() => {
+    setState((prev) => {
+      const normalized = normalizePcts(prev);
+      if (normalized.pct1 === prev.pct1 && normalized.pct2 === prev.pct2 && normalized.pct3 === prev.pct3) {
+        return prev;
+      }
+      return normalized;
+    });
+  }, [setState]);
 
   const result = useMemo(
     () =>
@@ -72,34 +92,14 @@ export function PillowView() {
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <PillowInputs state={state} onChange={setState} />
-        <PillowResults result={result} />
-      </div>
-      <section className="space-y-3">
-        <div className="flex flex-col gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("pillow.calc")}</h3>
-            <p className="text-xs text-muted-foreground">{t("pillow.calc.helper")}</p>
-          </div>
-          <TableToolbar
-            copySummaryLabel={t("actions.copySummary")}
-            actionsLabel={t("actions.menu")}
-            copyTableLabel={t("actions.copyTable")}
-            exportCsvLabel={t("actions.exportCsv")}
-            copySummaryId="pillow-copy-summary"
-            onCopySummary={handleCopySummary}
-            onCopyTable={handleCopyTable}
-            onExportCsv={handleExportCsv}
-          />
-        </div>
-        <BreakdownTable
-          columns={[
-            { key: "fibre", label: t("pillow.tbl.fibre") },
-            { key: "pct", label: t("pillow.tbl.pct"), align: "right" },
-            { key: "kg", label: t("pillow.tbl.kg"), align: "right" }
-          ]}
-          rows={tableRows}
+        <PillowResults
+          result={result}
+          breakdownRows={tableRows}
+          onCopySummary={handleCopySummary}
+          onCopyTable={handleCopyTable}
+          onExportCsv={handleExportCsv}
         />
-      </section>
+      </div>
     </div>
   );
 }
