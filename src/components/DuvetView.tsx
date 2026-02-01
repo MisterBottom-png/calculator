@@ -2,8 +2,6 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 import { DuvetInputs, type DuvetFormState } from "@/components/DuvetInputs";
 import { DuvetResults } from "@/components/DuvetResults";
-import { BreakdownTable } from "@/components/BreakdownTable";
-import { TableToolbar } from "@/components/TableToolbar";
 import { SIZE_PRESETS, calculateDuvet } from "@/lib/calculators/duvet";
 import { useLocalStorageState } from "@/lib/hooks/useLocalStorageState";
 import { useI18n } from "@/lib/hooks/useI18n";
@@ -112,36 +110,14 @@ export function DuvetView() {
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <DuvetInputs state={state} onChange={setState} />
-        <DuvetResults result={result} />
-      </div>
-      <section className="space-y-3">
-        <div className="flex flex-col gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("duvet.breakdown")}</h3>
-            <p className="text-xs text-muted-foreground">{t("duvet.breakdown.helper")}</p>
-          </div>
-          <TableToolbar
-            copySummaryLabel={t("actions.copySummary")}
-            actionsLabel={t("actions.menu")}
-            copyTableLabel={t("actions.copyTable")}
-            exportCsvLabel={t("actions.exportCsv")}
-            copySummaryId="duvet-copy-summary"
-            onCopySummary={handleCopySummary}
-            onCopyTable={handleCopyTable}
-            onExportCsv={handleExportCsv}
-          />
-        </div>
-        <BreakdownTable
-          columns={[
-            { key: "component", label: t("duvet.tbl.component") },
-            { key: "code", label: t("duvet.tbl.code") },
-            { key: "pct", label: t("duvet.tbl.pct"), align: "right" },
-            { key: "kg", label: t("duvet.tbl.kg"), align: "right" },
-            { key: "g", label: t("duvet.tbl.g"), align: "right" }
-          ]}
-          rows={tableRows}
+        <DuvetResults
+          result={result}
+          breakdownRows={tableRows}
+          onCopySummary={handleCopySummary}
+          onCopyTable={handleCopyTable}
+          onExportCsv={handleExportCsv}
         />
-      </section>
+      </div>
     </div>
   );
 }

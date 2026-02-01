@@ -13,6 +13,7 @@ export function TableToolbar({
   copyTableLabel,
   exportCsvLabel,
   copySummaryId,
+  compact = false,
   onCopySummary,
   onCopyTable,
   onExportCsv
@@ -22,6 +23,7 @@ export function TableToolbar({
   copyTableLabel: string;
   exportCsvLabel: string;
   copySummaryId?: string;
+  compact?: boolean;
   onCopySummary: () => void;
   onCopyTable: () => void;
   onExportCsv: () => void;
@@ -34,10 +36,16 @@ export function TableToolbar({
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            <MoreHorizontal className="h-4 w-4" />
-            {actionsLabel}
-          </Button>
+          {compact ? (
+            <Button variant="outline" size="icon" aria-label={actionsLabel}>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+              {actionsLabel}
+            </Button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onCopyTable}>

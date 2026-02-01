@@ -9,9 +9,28 @@ export type PillowFormState = {
   pct3: number;
 };
 
+const clampFinite = (value: number, min: number, max: number) => {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
 export function PillowInputs({ state, onChange }: { state: PillowFormState; onChange: (next: PillowFormState) => void }) {
   const { t } = useI18n();
   const fillError = state.fillWeight <= 0 ? t("validation.positive") : null;
+
+  const handlePct1Change = (value: number) => {
+    const next1 = clampFinite(value, 0, 100);
+    const next2 = clampFinite(state.pct2, 0, 100 - next1);
+    const next3 = 100 - next1 - next2;
+    onChange({ ...state, pct1: next1, pct2: next2, pct3: next3 });
+  };
+
+  const handlePct2Change = (value: number) => {
+    const next2 = clampFinite(value, 0, 100);
+    const next1 = clampFinite(state.pct1, 0, 100 - next2);
+    const next3 = 100 - next1 - next2;
+    onChange({ ...state, pct1: next1, pct2: next2, pct3: next3 });
+  };
 
   return (
     <Card className="p-4">
@@ -29,7 +48,7 @@ export function PillowInputs({ state, onChange }: { state: PillowFormState; onCh
           />
         </section>
         <section className="space-y-4 border-t border-border pt-6">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("pillow.calc")}</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("pillow.section.pcts")}</h3>
           <div className="grid gap-4 md:grid-cols-3">
             <NumberField
               id="pillow-pct1"
@@ -37,7 +56,7 @@ export function PillowInputs({ state, onChange }: { state: PillowFormState; onCh
               value={state.pct1}
               min={0}
               step={1}
-              onChange={(value) => onChange({ ...state, pct1: value })}
+              onChange={handlePct1Change}
             />
             <NumberField
               id="pillow-pct2"
@@ -45,7 +64,7 @@ export function PillowInputs({ state, onChange }: { state: PillowFormState; onCh
               value={state.pct2}
               min={0}
               step={1}
-              onChange={(value) => onChange({ ...state, pct2: value })}
+              onChange={handlePct2Change}
             />
             <NumberField
               id="pillow-pct3"
@@ -53,7 +72,9 @@ export function PillowInputs({ state, onChange }: { state: PillowFormState; onCh
               value={state.pct3}
               min={0}
               step={1}
-              onChange={(value) => onChange({ ...state, pct3: value })}
+              disabled
+              helperText={t("pillow.pct3.helper")}
+              onChange={() => {}}
             />
           </div>
           <p className="text-xs text-muted-foreground">{t("pillow.formula")}</p>
