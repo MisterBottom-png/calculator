@@ -81,7 +81,6 @@ export const et = {
   "pillow.calc": "Arvutatud mass",
   "pillow.calc.helper": "Kaalud sisaldavad 1% varu.",
   "pillow.breakdown.title": "Kiud",
-  "pillow.pct3.helper": "Arvutatakse automaatselt, et kokku oleks 100%.",
   "pillow.tbl.fibre": "Kiud",
   "pillow.tbl.pct": "%",
   "pillow.tbl.kg": "Kaal (kg)",

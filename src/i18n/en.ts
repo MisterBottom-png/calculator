@@ -81,7 +81,6 @@ export const en = {
   "pillow.calc": "Calculated weight",
   "pillow.calc.helper": "Weights include 1% allowance factor.",
   "pillow.breakdown.title": "Fibres",
-  "pillow.pct3.helper": "Auto-calculated so the total is 100%.",
   "pillow.tbl.fibre": "Fibre",
   "pillow.tbl.pct": "%",
   "pillow.tbl.kg": "Weight (kg)",

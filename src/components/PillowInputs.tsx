@@ -19,16 +19,26 @@ export function PillowInputs({ state, onChange }: { state: PillowFormState; onCh
   const fillError = state.fillWeight <= 0 ? t("validation.positive") : null;
 
   const handlePct1Change = (value: number) => {
-    const next1 = clampFinite(value, 0, 100);
-    const next2 = clampFinite(state.pct2, 0, 100 - next1);
-    const next3 = 100 - next1 - next2;
+    const next2 = clampFinite(state.pct2, 0, 100);
+    const next3 = clampFinite(state.pct3, 0, 100);
+    const remaining = Math.max(0, 100 - next2 - next3);
+    const next1 = clampFinite(value, 0, remaining);
     onChange({ ...state, pct1: next1, pct2: next2, pct3: next3 });
   };
 
   const handlePct2Change = (value: number) => {
-    const next2 = clampFinite(value, 0, 100);
-    const next1 = clampFinite(state.pct1, 0, 100 - next2);
-    const next3 = 100 - next1 - next2;
+    const next1 = clampFinite(state.pct1, 0, 100);
+    const next3 = clampFinite(state.pct3, 0, 100);
+    const remaining = Math.max(0, 100 - next1 - next3);
+    const next2 = clampFinite(value, 0, remaining);
+    onChange({ ...state, pct1: next1, pct2: next2, pct3: next3 });
+  };
+
+  const handlePct3Change = (value: number) => {
+    const next1 = clampFinite(state.pct1, 0, 100);
+    const next2 = clampFinite(state.pct2, 0, 100);
+    const remaining = Math.max(0, 100 - next1 - next2);
+    const next3 = clampFinite(value, 0, remaining);
     onChange({ ...state, pct1: next1, pct2: next2, pct3: next3 });
   };
 
@@ -72,9 +82,7 @@ export function PillowInputs({ state, onChange }: { state: PillowFormState; onCh
               value={state.pct3}
               min={0}
               step={1}
-              disabled
-              helperText={t("pillow.pct3.helper")}
-              onChange={() => {}}
+              onChange={handlePct3Change}
             />
           </div>
           <p className="text-xs text-muted-foreground">{t("pillow.formula")}</p>
